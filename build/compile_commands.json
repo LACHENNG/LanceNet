@@ -1,0 +1,22 @@
+[
+{
+  "directory": "/home/cl/Projects/WebServer/build",
+  "command": "/usr/bin/g++  -I/home/cl/Projects/WebServer/src -g -std=gnu++1z -o CMakeFiles/cltest.dir/apps/test_threadpool_sbuf.cpp.o -c /home/cl/Projects/WebServer/apps/test_threadpool_sbuf.cpp",
+  "file": "/home/cl/Projects/WebServer/apps/test_threadpool_sbuf.cpp"
+},
+{
+  "directory": "/home/cl/Projects/WebServer/build",
+  "command": "/usr/bin/g++  -I/home/cl/Projects/WebServer/src -g -std=gnu++1z -o CMakeFiles/echo_server.dir/apps/echo_server.cpp.o -c /home/cl/Projects/WebServer/apps/echo_server.cpp",
+  "file": "/home/cl/Projects/WebServer/apps/echo_server.cpp"
+},
+{
+  "directory": "/home/cl/Projects/WebServer/build",
+  "command": "/usr/bin/g++  -I/home/cl/Projects/WebServer/src -g -std=gnu++1z -o CMakeFiles/echo_client.dir/apps/echo_client.cpp.o -c /home/cl/Projects/WebServer/apps/echo_client.cpp",
+  "file": "/home/cl/Projects/WebServer/apps/echo_client.cpp"
+},
+{
+  "directory": "/home/cl/Projects/WebServer/build/src",
+  "command": "/usr/bin/g++  -I/home/cl/Projects/WebServer/src -g -std=gnu++1z -o CMakeFiles/wrappers.dir/unix_wrappers.cpp.o -c /home/cl/Projects/WebServer/src/unix_wrappers.cpp",
+  "file": "/home/cl/Projects/WebServer/src/unix_wrappers.cpp"
+}
+]

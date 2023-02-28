@@ -1,0 +1,8 @@
+/home/cl/Projects/WebServer/build/CMakeFiles/cltest.dir
+/home/cl/Projects/WebServer/build/CMakeFiles/echo_server.dir
+/home/cl/Projects/WebServer/build/CMakeFiles/echo_client.dir
+/home/cl/Projects/WebServer/build/CMakeFiles/edit_cache.dir
+/home/cl/Projects/WebServer/build/CMakeFiles/rebuild_cache.dir
+/home/cl/Projects/WebServer/build/src/CMakeFiles/wrappers.dir
+/home/cl/Projects/WebServer/build/src/CMakeFiles/edit_cache.dir
+/home/cl/Projects/WebServer/build/src/CMakeFiles/rebuild_cache.dir
