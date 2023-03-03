@@ -1,1 +1,0 @@
-/usr/bin/g++ -g -rdynamic CMakeFiles/cltest.dir/apps/test_threadpool_sbuf.cpp.o -o cltest  src/libwrappers.a -lpthread 

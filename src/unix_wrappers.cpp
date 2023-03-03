@@ -39,7 +39,7 @@ void Listen(int sockfd, int backlog){
 int Accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags){
    int fd = accept4(sockfd, addr, addrlen, flags);
    if(fd == -1){
-        perror("accept4()");
+        perror("Accept4()");
         exit(EXIT_FAILURE);
    }
    return fd; 
@@ -47,7 +47,7 @@ int Accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags){
 int Accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen){
     int fd = accept(sockfd, addr, addrlen);
     if(fd == -1){
-        perror("accept4()");
+        perror("Accept4()");
         exit(EXIT_FAILURE);
     }
     return fd; 
@@ -104,13 +104,16 @@ int Open_listenfd(int port){
 
     Getaddrinfo(nullptr, sport, &hints, &listp);
     
-    int sfd = -1;
+    int sfd, optval = 1;
     int rc = 0;
     /* try each address structures until we bind successfully. */
     for(p = listp; p != NULL; p = p->ai_next){
         if((sfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
             continue; 
         
+        /* Eliminates "Address already in use" error from bind" */
+        setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, (const void*)&optval, sizeof(int));
+
         if( (rc = bind(sfd, p->ai_addr, p->ai_addrlen)) == 0)
             break;             /* Success */
             
@@ -124,6 +127,12 @@ int Open_listenfd(int port){
     delete [] sport;
     freeaddrinfo(listp);
 
+    /* Make it a listening socket willing to accept connection requests*/
+    if(listen(sfd, 1024) < 0){
+        close(sfd);
+        return -1; 
+    }
+    
     return sfd;
 }
 

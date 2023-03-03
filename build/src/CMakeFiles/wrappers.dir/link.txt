@@ -1,2 +1,0 @@
-/usr/bin/ar qc libwrappers.a CMakeFiles/wrappers.dir/unix_wrappers.cpp.o
-/usr/bin/ranlib libwrappers.a

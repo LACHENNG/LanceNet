@@ -1,1 +1,0 @@
-/usr/bin/g++ -g -rdynamic CMakeFiles/echo_client.dir/apps/echo_client.cpp.o -o echo_client  src/libwrappers.a -lpthread 
