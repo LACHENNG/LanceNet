@@ -129,8 +129,9 @@ int Open_listenfd(int port){
 
     /* Make it a listening socket willing to accept connection requests*/
     if(listen(sfd, 1024) < 0){
+        perror("listen");
         close(sfd);
-        return -1; 
+        exit(EXIT_FAILURE);
     }
     
     return sfd;

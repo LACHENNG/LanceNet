@@ -1,39 +1,69 @@
 #include "threadpool.h"
 #include "unix_wrappers.h"
 
-int main(int argc, char* argv[])
+int _main(int argc, char* argv[]);
+
+int main(int argc, char* argv[]){
+    int n_clients = 1; 
+    if(argc == 4) n_clients = atoi(argv[3]);
+    for(int i = 0; i < n_clients; i++){
+        std::thread th(_main, argc, argv);
+        th.detach();
+    }
+    getchar();
+    return 0;
+}
+int _main(int argc, char* argv[])
 {
-    const char * hostname = "localhost";
+    char hostname[12] = "localhost";
 
     int port = 46666;
-    if(argc == 2)
+    if(argc == 3)
         int port = atoi(argv[1]);
-
+    if(argc == 4){
+        strncpy(hostname, argv[2], 12);
+    }
+    printf("Connecting to %s : %d\n", hostname, port);
+    
     int clientfd = Open_clientfd(hostname, port);
     printf("Connected to %s : %d\n", hostname, port);
 
-    fd_set ready;
+    fd_set read_set;
+    fd_set read_ready;
 
+    char stdinBuf[4096]{"Hello message from client"};
+    char msgBuf[4096];
+
+    FD_ZERO(&read_set);
+    FD_SET(0, &read_set);
+    FD_SET(clientfd, &read_set);
+    
     while(1){
-        FD_ZERO(&ready);
-        FD_SET(0, &ready);
-        FD_SET(clientfd, &ready);
-
-        
+        read_ready = read_set;
         // WARN: set timeval argument in select can lead to select return immediately which cause the outside loop busy!
-        // struct timeval tv{0,0};
-        int nready = select(clientfd + 1, &ready, NULL, NULL, NULL);
+        struct timeval tv{0,0};
+        int nready = select(clientfd + 1, &read_ready, NULL, NULL, &tv);
 
-        char stdinBuf[512];
-        char msgBuf[512];
-        /* stdin */
-        if(nready > 0 && FD_ISSET(0, &ready)){
+        /* send dummy data*/
+        int n = write(clientfd, stdinBuf, 4096);
+        if(n == 0){
+            printf("peer closed\n");
+            break;
+        }else if(n > 0){
+            // printf("write %d bytes\n", n);
+        }else{
+            perror("write");
+        }
+
+        /* send data from stdin */
+        if(nready > 0 && FD_ISSET(0, &read_ready)){
             int n = read(STDIN_FILENO, stdinBuf, 512);
             stdinBuf[n] = '\0';
             write(clientfd, stdinBuf, n);
         }
-        /* server message*/
-        if(nready > 0 && FD_ISSET(clientfd, &ready)){
+
+        /* read server message*/
+        if(nready > 0 && FD_ISSET(clientfd, &read_ready)){
             int n = read(clientfd, msgBuf, 512);
             msgBuf[n] = 0;
             if(n > 0) printf("[Echo]: %s\n", msgBuf); 
@@ -47,22 +77,5 @@ int main(int argc, char* argv[])
         }
     }
 
-    char Buf[1024];
-
-    while(fgets(Buf, 1024, stdin) != NULL){
-        // printf("%s", Buf); 
-        int rv = write(clientfd, Buf, strlen(Buf) + 1);
-        if(rv < 0){
-            perror("write");
-            break;
-        }
-        
-        char Buf2[1024];
-        int n = read(clientfd, Buf2, 1024);
-        Buf2[n] = 0;
-        printf("echo: %s\n", Buf2);
-    }
-
-    getchar();
     return 0;
 }

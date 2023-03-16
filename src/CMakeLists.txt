@@ -1,6 +1,6 @@
 # set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # set(CMAKE_CXX_STANDARD 11)
-# include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/memoryPool)
 aux_source_directory(. DIR_LIB_SRCS)
 
 message("DIR_LIB_SRCS : ${DIR_LIB_SRCS}")
@@ -11,3 +11,5 @@ add_library(wrappers ${DIR_LIB_SRCS})
 
 # message("CMAKE_BINARY_DIR : ${CMAKE_BINARY_DIR}")
 # message("CMAKE_CURRENT_BINARY_DIR : ${CMAKE_CURRENT_BINARY_DIR}")
+
+add_subdirectory(memoryPool)

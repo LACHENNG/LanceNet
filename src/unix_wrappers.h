@@ -18,6 +18,7 @@
 #include <arpa/inet.h>
 #include <memory>
 
+#include <sys/eventfd.h>
 /* defined by glic*/
 // extern int errno;
 

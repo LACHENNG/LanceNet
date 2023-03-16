@@ -4,6 +4,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <vector>
+#include <atomic>
 
 template<typename T>
 class SBuf{
@@ -16,7 +17,9 @@ public:
     /* remove if buf is not empty, suspend otherwise*/
     T remove();
 
-    // bool empty();
+    /* observer */
+    int size();
+    bool empty();
 
 private:
     std::vector<T> m_buf;               /* Buffer array */
@@ -28,6 +31,7 @@ private:
     std::condition_variable m_cv_items; /* Scheduling constraints */
     int m_available_slots;              /* Counts available slots*/
     int m_available_items;              /* Counts available items*/  
+    std::atomic_int _nsize;
 };
 
 template<typename T>
@@ -51,7 +55,7 @@ void SBuf<T>::insert(T item){
     m_available_slots--;
 
     lk.unlock();             // can not change the two lines code order
-    m_cv_items.notify_all(); // TODO: figure out why not right when notify_one 
+    m_cv_items.notify_one(); // TODO: figure out why not right when notify_one 
     
 }
 
@@ -63,14 +67,23 @@ T SBuf<T>::remove(){
         m_cv_items.wait(lk);
     }
 
-    int rv = m_buf[(m_front) % m_maximum_slots];
+    T rv = m_buf[(m_front) % m_maximum_slots];
     m_front = (m_front + 1) % m_maximum_slots;
     m_available_slots++; 
     m_available_items--;
-
+    --_nsize;
     lk.unlock();
     m_cv_slots.notify_one();
     
     return rv;
 }
 
+template<typename T>
+bool SBuf<T>::empty(){
+    return _nsize == 0;
+}
+
+template<typename T>
+int SBuf<T>::size(){
+    return _nsize.load();
+}

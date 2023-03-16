@@ -47,6 +47,10 @@
         "cstring": "cpp",
         "iostream": "cpp",
         "*.tpp": "cpp",
-        "cerrno": "cpp"
+        "cerrno": "cpp",
+        "functional": "cpp",
+        "iterator": "cpp",
+        "unordered_set": "cpp",
+        "cinttypes": "cpp"
     }
 }
