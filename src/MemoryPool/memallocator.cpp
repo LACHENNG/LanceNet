@@ -1,15 +1,14 @@
-#include "memalloc.h"
+#include "memallocator.h"
 #include <assert.h>
-// MemoryAlloc::MemoryAlloc(int szBlocks, int szMemory){
-//     m_szBlock = szBlocks;
-//     m_szPerBlock = szMemory;
-// }
 
 MemoryAlloc::~MemoryAlloc(){
     free(m_prawmem);
 }
 
 void * MemoryAlloc::mem_alloc(size_t nzSize){
+    // TODO: optimize
+    // std::lock_guard<std::mutex> lg(_mutex);
+
     if(m_prawmem == nullptr){
         initMemAlloc();
     }
@@ -23,6 +22,7 @@ void * MemoryAlloc::mem_alloc(size_t nzSize){
         block->nRef = 1;
         pMem = ((char*)block + sizeof(MemoryBlock));
     }else{
+
         MemoryBlock* block = m_head;
         m_head = m_head->next;
         assert(block->nRef == 0);
@@ -33,6 +33,7 @@ void * MemoryAlloc::mem_alloc(size_t nzSize){
 }
 
 void MemoryAlloc::mem_free(void* __ptr){
+
     MemoryBlock* block = (MemoryBlock*)((char*)__ptr - sizeof(MemoryBlock));
     /* not managed by MemoryAlloc, free directly */
     if(block->pMemAlloc == nullptr){
@@ -40,6 +41,8 @@ void MemoryAlloc::mem_free(void* __ptr){
     }
     /* return memory to pool*/
     else{
+            // TODO: optimize
+        // std::lock_guard<std::mutex> lg(_mutex);
         assert(block->nRef == 1);
         block->nRef = 0;
         block->next = m_head;

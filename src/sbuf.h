@@ -6,23 +6,24 @@
 #include <vector>
 #include <atomic>
 
-template<typename T>
+#define SBUF_DEFAULT_CAPACITY 100000
+template<typename _ItemType>
 class SBuf{
 public:
-    explicit SBuf(size_t capacity = 10000);
+    explicit SBuf(size_t capacity = SBUF_DEFAULT_CAPACITY);
     ~SBuf() = default;
     /* insert if have idle slot, suspend otherwise*/
     /* TODO: support move semantic */
-    void insert(T item);
+    void insert(_ItemType item);
     /* remove if buf is not empty, suspend otherwise*/
-    T remove();
+    _ItemType remove();
 
     /* observer */
     int size();
     bool empty();
 
 private:
-    std::vector<T> m_buf;               /* Buffer array */
+    std::vector<_ItemType> m_buf;               /* Buffer array */
     size_t m_maximum_slots;             /* Maxinum number of slots(slots limits)*/
     size_t m_front;                     /* m_buf[m_front % n] is the first element*/
     size_t m_rear;                      /* m_buf[(m_rear - 1 + n) % n] is the last element*/
@@ -34,15 +35,15 @@ private:
     std::atomic_int _nsize;
 };
 
-template<typename T>
-SBuf<T>::SBuf(size_t capacity): m_buf(capacity), m_maximum_slots(capacity), 
+template<typename _ItemType>
+SBuf<_ItemType>::SBuf(size_t capacity): m_buf(capacity), m_maximum_slots(capacity), 
                                 m_front(0), m_rear(0), m_available_slots(capacity), 
                                 m_available_items(0)
 { 
 }
 
-template<typename T>
-void SBuf<T>::insert(T item){
+template<typename _ItemType>
+void SBuf<_ItemType>::insert(_ItemType item){
     std::unique_lock<std::mutex> lk(m_mutex);
     // m_cv_slots.wait(lk, [this]{return m_available_slots > 0;});
     while(m_available_slots <= 0){
@@ -59,15 +60,15 @@ void SBuf<T>::insert(T item){
     
 }
 
-template<typename T>
-T SBuf<T>::remove(){    
+template<typename _ItemType>
+_ItemType SBuf<_ItemType>::remove(){    
     std::unique_lock<std::mutex> lk(m_mutex);
     // m_cv_items.wait(lk, [this]{return m_available_items > 0;});
     while(m_available_items <= 0){
         m_cv_items.wait(lk);
     }
 
-    T rv = m_buf[(m_front) % m_maximum_slots];
+    _ItemType rv = m_buf[(m_front) % m_maximum_slots];
     m_front = (m_front + 1) % m_maximum_slots;
     m_available_slots++; 
     m_available_items--;
@@ -78,12 +79,12 @@ T SBuf<T>::remove(){
     return rv;
 }
 
-template<typename T>
-bool SBuf<T>::empty(){
+template<typename _ItemType>
+bool SBuf<_ItemType>::empty(){
     return _nsize == 0;
 }
 
-template<typename T>
-int SBuf<T>::size(){
+template<typename _ItemType>
+int SBuf<_ItemType>::size(){
     return _nsize.load();
 }

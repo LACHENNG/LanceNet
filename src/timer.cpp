@@ -8,7 +8,7 @@ Timer::Timer(){
 void Timer::update(){
     _begin = high_resolution_clock::now();
 }
-/* GET ELAPSED TIME IN sECOND PRECSION */
+/* GET ELAPSED TIME IN second PRECSION */
 double Timer::getElapsedSecond(){
     return getElapsedMicroSec() * 0.001 * 0.001;
 }

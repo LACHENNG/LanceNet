@@ -1,11 +1,16 @@
 
 cmake_minimum_required(VERSION 3.0)
 project(WebServer CXX)
+SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
 
+add_definitions(-DDEBUG)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_INCLUDE_PATH ${CMAKE_SOURCE_DIR}/bin)
 
-include_directories(${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/apps/echo)
+include_directories(${CMAKE_SOURCE_DIR}/src 
+                    ${CMAKE_SOURCE_DIR}/src/ThreadPool
+                    ${CMAKE_SOURCE_DIR}/src/MemoryPool
+                    ${CMAKE_SOURCE_DIR}/apps/echo)
 
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/apps/test)

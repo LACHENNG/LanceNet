@@ -1,4 +1,4 @@
-set(src memalloc.cpp memoryMgr.cpp alloc.cpp)
+set(src memallocator.cpp memmanager.cpp alloc.cpp)
 # add_definitions(-DDEBUG)
 add_library(memorypool ${src})
 

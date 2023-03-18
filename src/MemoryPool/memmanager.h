@@ -1,28 +1,29 @@
 /* Autor: lang @ nwpu 
  * Description: A memory pool Manager
 */
-
 #pragma once 
-#include "memalloc.h"
+#include "memallocator.h"
 
 /* debug purpose only */
 #ifdef DEBUG
     #include "stdio.h"
-    #define XPrint(...) printf(__VA_ARGS__);
+    #define xPrintf(...) printf(__VA_ARGS__);
 #else
-    #define XPrint(...) 
+    #define xPrintf(...) 
 #endif
 /* !debug purpose only */
+
 #define ALLOC_SIZE_RAGNG 1024
 
-class MemoryMgr{
+class MemoryManager{
 public:
+    using MemoryBlock = MemoryAlloc::MemoryBlock;
     void *mem_malloc(size_t szSize);
     void mem_free(void *__ptr);
 
-    static MemoryMgr& getInstance();
+    static MemoryManager& getInstance();
 private:
-    MemoryMgr();
+    MemoryManager();
     void initszAlloc();
 
     MemoryAllocator<10000, 64> _mem64;

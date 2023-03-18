@@ -23,7 +23,7 @@ int main(int argc, char** argv, char* envp[]){
     // snprintf(ptrs[0], 10, "%s", envp[2]);
  
     // delete ptrs[0];
-    const int NR = 100;
+    const int NR = 1;
     int repeat = NR;
     Timer timer;
     timer.update();

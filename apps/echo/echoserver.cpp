@@ -86,7 +86,7 @@ void EchoServer::loop(){
             if(clientfd != listenfd  && clientfd != m_eventfd 
                 && FD_ISSET(clientfd, &m_ready)){
                 /* exit sockets should`nt be added again */
-                m_pworkers->add_task(session);
+                m_pworkers->addTask(session);
                 // nready--;
             }         
         } 

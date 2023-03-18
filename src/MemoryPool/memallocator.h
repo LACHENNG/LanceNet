@@ -1,19 +1,19 @@
 #pragma once 
 #include <stdlib.h>
-class MemoryAlloc;
-
-class MemoryBlock{
-public:
-    int id_block;
-    int nRef;
-    MemoryAlloc* pMemAlloc;
-    MemoryBlock* next;
-};
-
+#include <mutex>
+#include <iostream>
 
 /* singleton */
 
 class MemoryAlloc{
+public:
+    class MemoryBlock{
+    public:
+        int id_block;
+        int nRef;
+        MemoryAlloc* pMemAlloc;
+        MemoryBlock* next;
+    };
 public:
     MemoryAlloc(int szBlocks, int szUnit);
     MemoryAlloc() = default;
@@ -29,6 +29,8 @@ protected:
     size_t m_szPerBlock{0};
     MemoryBlock* m_head{nullptr};
     void* m_prawmem{nullptr};
+private:
+    std::mutex _mutex;
 };
 
 
@@ -40,5 +42,9 @@ public:
         m_szPerBlock = szUnit;
     }
 };
+
+
+/* lock logit util*/
+void logit(const bool aquired, const char* lockname, const int linenum, const char* filename);
 
 

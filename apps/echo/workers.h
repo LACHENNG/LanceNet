@@ -1,26 +1,26 @@
 
 #pragma once
-#include "threadpool.h"
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <unix_wrappers.h>
 
-#include <sys/time.h>
-#include <sys/types.h>
-#include <unistd.h>
 
-#include <assert.h>
-#include "timer.h"
+// #include "threadpool.h">
+// #include "unix_wrappers.h"
+
+// #include <sys/time.h>
+// #include <sys/types.h>
+// #include <unistd.h>
+
+// #include <assert.h>
+// #include "timer.h"
 // #include <vector>
 // #include <deque> 
 #include <atomic>
 
-#include <vector>
-#include <queue>
-#include <unordered_set>
-#include <functional>
-#include <iostream>
+// #include <vector>
+// #include <queue>
+// #include <unordered_set>
+// #include <functional>
+// #include <iostream>
 
 using std::cout;
 
@@ -60,31 +60,3 @@ void Workers<TaskType>::OnRun(TaskType task)
         task->OnMessage();
     }
 }
-
-// template<class TaskType>
-// // TODO: fix the Sticky packet and less packet in TCP network programming
-// void Workers<TaskType>::OnMessage(int fd){
-//     // if(eventloop->m_fds[fd] == -1) return;
-
-//     static char Buf[1024]; 
-//     int n = read(fd, Buf, 1024);
-//     /* for nonblocking socket fd, n == 0 mean peer closed the connection*/
-//     if(n == 0){
-//         cout << "thread: " << std::this_thread::get_id() << " " << "OnMessage n == 0\n";
-//         OnExit(fd);
-//     }
-//     else if(n == -1){
-//         perror("read");
-//     }else if(n > 0){
-//         auto addBytesToServer = std::mem_fn(&EchoServer::addRecvBytes);
-//         addBytesToServer(m_caller_this, n);
-//         // fprintf(stdout, "from %d : %s\n", fd, Buf);
-//         // write(fd, Buf, n); /* issue: race condition  */ 
-//     }      
-// }
-
-// template<class TaskType>
-// void Workers<TaskType>::OnExit(int fd){
-//     auto exit = std::mem_fn(&EchoServer::OnClientExit);
-//     exit(m_caller_this, fd);
-// }

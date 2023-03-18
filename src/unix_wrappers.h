@@ -1,5 +1,6 @@
 /*
- * Simple wrappers to common posix and unix system call with error checking
+ * Description：Simple wrappers to common posix and unix system call with error checking
+ * Author: Lang@nwpu
  */
 
 #pragma once 
