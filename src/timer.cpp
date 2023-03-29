@@ -1,6 +1,5 @@
 #include "timer.h"
 
-
 Timer::Timer(){
     _begin = high_resolution_clock::now();
 }
@@ -14,7 +13,7 @@ double Timer::getElapsedSecond(){
 }
 
 /* GET ELAPSED TIME IN millisecond PRECSION */
-LL Timer::getElapsedMilliSec(){
+double Timer::getElapsedMilliSec(){
     return getElapsedMicroSec() * 0.001;
 }
 /* GET ELAPSED TIME IN microsecond PRECSION */

@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 #define BUF_SIZE 4096
-#define MSG_BUF BUF_SIZE*10
+#define MSG_BUF_SIZE BUF_SIZE*10
 
 class ClientEvent{
 public:
@@ -16,26 +16,36 @@ public:
     virtual void OnExit() = 0;
 };
 
+class ITaskType{
+public:
+    virtual  void doWork() = 0;
+};
 
-
-class ClientSession : public ClientEvent{
+class ClientSession : public ClientEvent, public ITaskType{
 public:
     typedef int element_type;
     ClientSession(int clientfd, void * pServer);
-    virtual void OnMessage();
-    virtual void OnExit();
+
+    virtual void doWork() override;
+    void OnMessage() override;
+    void OnExit() override;
 
     int getFd() const;
-    void * getPServer();
+    void * getServerPtr();
 
     bool operator<(const ClientSession* rhs){
         return m_clientfd < rhs->getFd();
     }
 
 private:
-    void * m_pServer;
+    void* m_pServer;
     int m_clientfd;
-    char m_upszBuf[BUF_SIZE];
-    char m_upMsgBuf[MSG_BUF]; 
+    /* buffer of client messages */
+    char m_szBuf[BUF_SIZE];
+    char m_MsgBuf[MSG_BUF_SIZE]; 
+    /* the next avaliable mem pos in msg buf*/
+    size_t _msgPosEnd{0};
+    /* the next byte to be processed */
+    size_t _msgPosCur{0};
 };
 

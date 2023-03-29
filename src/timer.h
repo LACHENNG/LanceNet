@@ -13,7 +13,7 @@ public:
     /* GET ELAPSED TIME IN sECOND PRECSION */
     double getElapsedSecond();
     /* GET ELAPSED TIME IN millisecond PRECSION */
-    LL getElapsedMilliSec();
+    double getElapsedMilliSec();
     /* GET ELAPSED TIME IN microsecond PRECSION */
     double getElapsedMicroSec();
     /* get elapsed time in  nanosecond precision */

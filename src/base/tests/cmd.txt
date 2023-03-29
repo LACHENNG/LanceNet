@@ -1,0 +1,1 @@
+echo  g++ Thread_test.cpp ../*.cpp   -lpthread -g

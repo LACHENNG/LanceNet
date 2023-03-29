@@ -1,5 +1,7 @@
 #include "threadpool.h"
 #include "unix_wrappers.h"
+#include "msg.h"
+
 
 int _main(int argc, char* argv[]);
 
@@ -44,7 +46,8 @@ int _main(int argc, char* argv[])
         struct timeval tv{0,0};
         int nready = select(clientfd + 1, &read_ready, NULL, NULL, &tv);
 
-        /* send dummy data*/
+        /* send LoginReq data*/
+        
         int n = write(clientfd, stdinBuf, 4096);
         if(n == 0){
             printf("peer closed\n");

@@ -8,7 +8,7 @@ bool cmp(ClientSession* a, ClientSession* b){
 }
 
 EchoServer::EchoServer(int listen_port) 
-        :m_bRuning(false), m_UIThread(std::mem_fn(&EchoServer::UI), this),
+        :m_bRuning(true), m_UIThread(std::mem_fn(&EchoServer::UI), this),
          m_pworkers(new Workers<ClientSession*>(8, 1024, this))
 {
     /* console UI*/

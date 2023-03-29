@@ -5,11 +5,9 @@
 #include "workers.h"
 using namespace std;
 
-
 /*  the glibc implementation makes fd_set a fixed-size type, with FD_SETSIZE defined as 1024, and the FD_*() macros operating according to that limit.  
  *  To monitor  file  descriptors greater than 1023, use poll(2) instead
 */
-
 
 int main(){
     unique_ptr<EchoServer> upEchoServer = make_unique<EchoServer>(46666);
