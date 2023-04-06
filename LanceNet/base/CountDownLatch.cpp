@@ -1,5 +1,7 @@
 #include "CountDownLatch.h"
 
+using namespace LanceNet;
+
 CountDownLatch::CountDownLatch(int _counts)
   : _countdown(_counts),
     _cv(_mutex)

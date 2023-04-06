@@ -1,4 +1,5 @@
 #include "Mutex.h"
+using namespace LanceNet;
 
 MutexLock::MutexLock()
 {

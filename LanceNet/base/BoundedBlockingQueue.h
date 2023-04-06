@@ -1,9 +1,19 @@
-// Author : Lang Chen @ nwpu
+// Author :  Lance(Lang Chen) @ npuw
+//
+// Brief: BoundedBlockingQueue is a MT-safe bounded queue base on production-comsumer model
+// blocks if the queue is empty when 'take()' or blocks at 'put()' when the queue is full
+
+#ifndef LanceNet_BASE_BOUNDED_BLOCKING_QUEUE_H
+#define LanceNet_BASE_BOUNDED_BLOCKING_QUEUE_H
+
 #include "Mutex.h"
 #include "Condition.h"
 
 #include <deque>
 #include <assert.h>
+
+namespace LanceNet
+{
 
 template<typename T>
 class BoundedBlockingQueue : noncopyable{
@@ -76,4 +86,6 @@ public:
     }
 };
 
+} // namespace LanceNet
 
+#endif // LanceNet_BASE_BOUNDED_BLOCKING_QUEUE_H

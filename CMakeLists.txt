@@ -4,6 +4,7 @@ project(WebServer CXX)
 SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
 
 add_definitions(-DDEBUG)
+
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_INCLUDE_PATH ${CMAKE_SOURCE_DIR}/bin)
 

@@ -1,3 +1,8 @@
+// Author :  Lance(Lang Chen) @ npuw
+//
+// Brief: BlockingQueue is a MT-safe unbounded queue base on production-comsumer model
+// blocks when `take()` at a empty queue.
+
 #ifndef BASE_BLOCKING_QUEUE_H
 #define BASE_BLOCKING_QUEUE_H
 #include "Mutex.h"
@@ -5,6 +10,8 @@
 #include "noncopyable.h"
 #include "assert.h"
 #include <deque>
+
+namespace LanceNet{
 
 template<typename T>
 class BlockingQueue : noncopyable{
@@ -18,13 +25,13 @@ public:
       : cv_(mutex_)
     {
     }
-
+    // copy senmantic 
     void put(const T& data){
         MutexLockGuard lock(mutex_);
         que_.push_back(data);
         cv_.notifyOne();
     }
-
+    // move senmantic
     void put(T&& data){
         MutexLockGuard lock(mutex_);
         que_.push_back(std::move(data));
@@ -45,9 +52,11 @@ public:
         que_.pop_front();
 
         return std::move(front);
-        // Note: a temp object is a rvalue which is usually auto RVOed by the compiler
+        // Note: a temp object is a rvalue which is usually auto RVO optimized by the compiler
         // but data is left value so explicitly std::move
     }
 };
+
+} // namespace LanceNet
 
 #endif // BASE_BLOCKING_QUEUE_H

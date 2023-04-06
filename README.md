@@ -1,4 +1,5 @@
-# Tiny Web Sever From Scratch
+# LanceNet: A web library From Scratch
+
 
 1. concurrent echo server with Select IO multiplexing
  

@@ -1,6 +1,6 @@
-// Author: Lang Chen @ nwpu
-#ifndef BASE_THREAD_POOL_H
-#define BASE_THREAD_POOL_H
+// Author: Lance(Lang Chen) @ nwpu
+#ifndef LanceNet_BASE_THREAD_POOL_H
+#define LanceNet_BASE_THREAD_POOL_H
 
 #include "noncopyable.h"
 #include "BlockingQueue.h"
@@ -11,9 +11,11 @@
 
 #include <functional>
 
+namespace LanceNet
+{
 // thread pool for executing some computing tasks, so the Task is more like any executable , may std::function, lambdas or other raw c functions
 // Design brief: 
-//     Traditional: make Thread::join
+//     Traditional: make Thread::
 //     My: I use std::bind and std::function to replace virtuals, following the Suggestions of Scott Meyers [EC3, item 35]
 class ThreadPool : noncopyable
 {
@@ -76,4 +78,6 @@ private:
     }
 };
 
-#endif  // BASE_THREAD_POOL_H
+} // namespace LanceNet
+
+#endif  // Lance_BASE_THREAD_POOL_H

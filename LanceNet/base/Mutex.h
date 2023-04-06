@@ -1,4 +1,7 @@
-// Author: Lang Chen @ nwpu 
+// Author: Lance(Lang Chen) @ nwpu
+//
+// Brief: A RAII-style pthread mutex Lock wrapper
+//        alone with some simple tools for debugging lock-related errors
 #ifndef BASE_MUTEX_H
 #define BASE_MUTEX_H
 #include "noncopyable.h"
@@ -9,19 +12,19 @@
     #include <time.h>
 
 #define MUTEX_BEFORE_LOCK_INFO(mutex) do{ \
-    printf("Trying to lock mutex %p at %ld \n", &mutex, time(NULL)); \
+    printf("Trying to lock mutex %p timestamp %ld \n", &mutex, time(NULL)); \
 }while(0);
 
 #define MUTEX_AFTER_LOCK_INFO(mutex) do{ \
-    printf("Locked mutex %p at %ld \n", &mutex, time(NULL)); \
+    printf("Locked mutex %p timestamp %ld \n", &mutex, time(NULL)); \
 }while(0);
 
 #define MUTEX_BEFORE_UNLOCK_INFO(mutex) do{ \
-    printf("Trying to unlock mutex %p at %ld \n", &mutex, time(NULL)); \
+    printf("Trying to unlock mutex %p timestamp %ld \n", &mutex, time(NULL)); \
 }while(0);
 
 #define MUTEX_AFTER_UNLOCK_INFO(mutex) do{ \
-    printf("Unlocked mutex %p at %ld \n", &mutex, time(NULL)); \
+    printf("Unlocked mutex %p timestamp %ld \n", &mutex, time(NULL)); \
 }while(0);
 
 #else
@@ -35,6 +38,10 @@
 #define MUTEX_AFTER_UNLOCK_INFO(mutex)
 
 #endif // DEBUG
+
+
+namespace LanceNet
+{
 
 class MutexLock : noncopyable{
 public:
@@ -65,5 +72,6 @@ private:
 };
 
 // #define MutexLockGuard(x) static_assert(false, "guard object name needed" ) 
+} // namespace LanceNet
 
 #endif //!BASE_MUTEX_H

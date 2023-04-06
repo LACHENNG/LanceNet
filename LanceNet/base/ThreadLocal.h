@@ -1,13 +1,17 @@
 // Author: Lang Chen @ nwpu
-#ifndef BASE_THREAD_LOCAL_H
-#define BASE_THREAD_LOCAL_H
+// 
+// Brief: create a T object with thread local storage lifetime with no arguments
+// the data of Type T which automatically allocated internally by ThreadLocal is guaranteed to be released when thread exits
+#ifndef Lance_BASE_THREAD_LOCAL_H
+#define Lance_BASE_THREAD_LOCAL_H
 
 #include <pthread.h>
 #include "noncopyable.h"
 #include <stdio.h>
 
-// create a T object with thread local storage lifetime with no arguments
-// the data of Type T which automatically allocated internally by ThreadLocal is guaranteed to be released when thread exits
+namespace LanceNet
+{
+
 template<typename T>
 class ThreadLocal : noncopyable{
 public:
@@ -39,4 +43,6 @@ private:
     pthread_key_t _key;
 };
 
-#endif // ! BASE_THREAD_LOCAL_H
+} // namespace LanceNet
+
+#endif // LanceNet_BASE_THREAD_LOCAL_H

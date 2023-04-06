@@ -1,9 +1,9 @@
 // Author: Lang Chen @ nwpu
 
 #include "Thread.h"
+using namespace LanceNet;
 
 std::atomic_uint32_t Thread::createdThreads(0);
-
 
 Thread::Thread(ThreadFunc threadFunc, std::string name)
   : _joined(false),

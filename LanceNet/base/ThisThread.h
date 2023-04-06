@@ -1,3 +1,8 @@
+// Author: Lance(Lang Chen) @ nwpu
+//
+// Brief: Providing get thread id Gettid() and GetCurrentThreadName
+//        use GCC buliltin thread local to store and cache result
+
 #ifndef BASE_THIS_THREAD_H
 #define BASE_THIS_THREAD_H
 #include <unistd.h>
@@ -10,7 +15,11 @@
 #include <stdio.h>
 #endif
 
-namespace ThisThread{
+namespace LanceNet
+{
+
+namespace ThisThread
+{
 
 const int INVALID_THREAD_ID = 0;
 const int THREAD_NAME_BUF_SIZE = 32;
@@ -59,5 +68,8 @@ inline int GetCountofSysCallOfgettid()
     return ncalls_gettid;
 }
 
+} // namespace LanceNet
+
 } // namespace: ThisThread
+
 #endif // THIS_THREAD_H

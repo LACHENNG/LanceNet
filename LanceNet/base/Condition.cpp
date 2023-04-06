@@ -1,5 +1,7 @@
 #include "Condition.h"
 
+using namespace LanceNet;
+
 ConditionVariable::ConditionVariable(MutexLock& mutex) : _mutex(mutex)
 {
     pthread_cond_init(&_cv, NULL);

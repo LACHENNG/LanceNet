@@ -32,7 +32,7 @@ private:
     pid_t _cached_tid;
     std::string _thread_name;
     ThreadFunc _threadFunc;
-    CountDownLatch _countdownlatch;
+    LanceNet::CountDownLatch _countdownlatch;
 // private:
        // struct ThreadData{
        //     using ThreadFunc = std::function<void()>;

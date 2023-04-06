@@ -1,6 +1,13 @@
+// Author: Lance(Lang Chen) @ nwpu
+//
+// Brief: A simple wrapper to Pthread condition variable
 #ifndef BASE_CONDITION_H
 #define BASE_CONDITION_H
+
 #include "Mutex.h"
+
+namespace LanceNet
+{
 
 class ConditionVariable : noncopyable{
 public:
@@ -15,4 +22,6 @@ private:
     pthread_cond_t _cv;
 };
 
-#endif //!BASE_CONDITION_H
+} // namespace LanceNet
+
+#endif //BASE_CONDITION_H
