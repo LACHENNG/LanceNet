@@ -12,6 +12,7 @@
 // #include <utility>
 
 #ifndef __GNUC__
+#warning "NOT GNUC, using strrchr instead of __builtin_strrchr"
     #include <string.h>
     #define __builtin_strrchr strrchr
 #endif
@@ -27,7 +28,7 @@ namespace LanceNet
 // There is a global defualt LogLevel which will influence the manner of Logger
 // specifically, when Logger.loglevel <= g_loglevel, the log will be ignored
 
-// log format example 20230101 12:30:00.1234431 TID LEVEL Message - File:Line
+// log format example [LOG_LEVEL] 20230101 12:30:00.1234431 tid Message - File:Line
 class Logger : noncopyable{
 public:
     using LogCallback = std::function<void(LogStream& stream)>;
@@ -41,8 +42,8 @@ public:
         FATAL
     };
 
-    static LogLevel logLevel();
-    static void setLogLevel(LogLevel level);
+    static Logger::LogLevel logLevel();
+    static void setLogLevel(Logger::LogLevel level);
 
     // a possibly GCC optimized compile time file basename acquistion
     class CurrentFileName{

@@ -1,13 +1,4 @@
-
-cmake_minimum_required(VERSION 3.0)
-
-# set project name and version 
-project(base VERSION 1.0)
-
-# specify the C++ standard
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
-
+set(LIB_NAME LanceNet_base)
 
 set(SRC_LIST
     Condition.cpp
@@ -17,18 +8,21 @@ set(SRC_LIST
     ThisThread.cpp
     Thread.cpp
     unix_wrappers.cpp
+    StringPiece.cpp
 )
 
-add_library(${PROJECT_NAME} 
+add_library(
+    ${LIB_NAME}
     ${SRC_LIST})
 
-# target_include_directories(${PROJECT_NAME} 
+# target_include_directories(${PROJECT_NAME}
 #     INTERFACE
 #     ${CMAKE_CURRENT_SOURCE_DIR}
 # )
 
 target_link_libraries(
-    ${PROJECT_NAME}
+    ${LIB_NAME}
+    PRIVATE
     pthread
 )
 

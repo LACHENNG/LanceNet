@@ -16,5 +16,5 @@ target_include_directories(logging PRIVATE
 
 target_link_libraries(logging PRIVATE
                     log
-                    base
+                    LanceNet_base
                     )
