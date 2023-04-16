@@ -1,0 +1,29 @@
+
+set(Logging_SRC
+
+ColorText.cpp
+LogStream.cpp
+Logging.cpp
+)
+
+add_library(LanceNet_log ${Logging_SRC})
+target_link_libraries(log PUBLIC LanceNet_base LanceNet_net)
+
+add_executable(logging test/Logging_test.cpp)
+add_executable(colortext test/consolecolor_test.cpp)
+
+target_include_directories(logging PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(logging PRIVATE
+    log
+    LanceNet_net
+    LanceNet_base
+)
+
+target_link_libraries(colortext PRIVATE
+    log
+    LanceNet_base
+    LanceNet_net
+)

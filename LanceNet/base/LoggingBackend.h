@@ -2,9 +2,12 @@
 #define LanceNet_BASE_LOGGING_LOGGINGBACKEND_H
 
 #include <stdlib.h>
-#include <../Thread.h>
+#include <LanceNet/base/Thread.h>
 
 namespace LanceNet
+{
+
+namespace base
 {
 // flush the buffer to disk file when the buffer is full or every n seconds
 //
@@ -30,6 +33,7 @@ private:
 
 };
 
+} // namespace base
 } // namespace LanceNet
 
 #endif // namespace LoggerBackend

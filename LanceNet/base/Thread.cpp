@@ -1,8 +1,12 @@
 // Author: Lang Chen @ nwpu
 
 #include "Thread.h"
-using namespace LanceNet;
 
+namespace LanceNet
+{
+
+namespace base
+{
 std::atomic_uint32_t Thread::createdThreads(0);
 
 Thread::Thread(ThreadFunc threadFunc, std::string name)
@@ -84,3 +88,7 @@ unsigned int Thread::getCreateNumThread()
 {
     return Thread::createdThreads.load();
 }
+
+} // namespace base
+
+} // namespace LanceNet

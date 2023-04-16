@@ -1,10 +1,11 @@
-#include "Time.h"
-#include "num2cstr.h"
+#include <LanceNet/base/Time.h>
+#include <LanceNet/base/num2cstr.h>
 
 #include <chrono>
 #include <assert.h>
 
-using namespace LanceNet;
+namespace LanceNet
+{
 
 TimeStamp::TimeStamp()
   : time_point_(time_point<high_resolution_clock>::min())
@@ -75,23 +76,24 @@ TimeStamp TimeStamp::now()
 }
 
 /* GET ELAPSED TIME IN second PRECSION */
-int64_t LanceNet::getElapsedSec(TimeStamp start, TimeStamp end){
+int64_t getElapsedSec(TimeStamp start, TimeStamp end){
     return getElapsedNanoSec(start, end) * 1e-9;
 }
 
 /* GET ELAPSED TIME IN millisecond PRECSION */
-int64_t LanceNet::getElapsedMilliSec(TimeStamp start, TimeStamp end){
+int64_t getElapsedMilliSec(TimeStamp start, TimeStamp end){
     return getElapsedNanoSec(start, end) * 1e-6;
 }
 /* GET ELAPSED TIME IN microsecond PRECSION */
-int64_t LanceNet::getElapsedMicroSec(TimeStamp start, TimeStamp end)
+int64_t getElapsedMicroSec(TimeStamp start, TimeStamp end)
 {
     return getElapsedNanoSec(start, end) * 1e-3;
 }
 
 /* get elapsed time in  nanosecond precision */
-int64_t LanceNet::getElapsedNanoSec(TimeStamp start, TimeStamp end){
+int64_t getElapsedNanoSec(TimeStamp start, TimeStamp end){
     auto dur = end.getTimePoint() - start.getTimePoint();
     return duration_cast<nanoseconds>(dur).count();
 }
 
+} // namespace LanceNet

@@ -2,6 +2,7 @@
 
 #ifndef LanceNet_NET_BUFFER_H
 #define LanceNet_NET_BUFFER_H
+#include "LanceNet/base/copyable.h"
 #include <LanceNet/base/StringPiece.h>
 
 #include <vector>
@@ -16,7 +17,7 @@ namespace net
 // init size kDefaultPrependSize + kDefaultInitSize
 // implemented based on vector<char> which indicates that the capacity can automatically adjust to user`s needs
 
-class Buffer
+class Buffer : copyable
 {
 private:
     std::vector<char> buf_;

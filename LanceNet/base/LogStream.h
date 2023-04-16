@@ -4,8 +4,7 @@
 #define LancNet_BASE_LOGGING_LOG_STREAM_H
 
 #include <string>
-#include "../noncopyable.h"
-
+#include <LanceNet/base/noncopyable.h>
 // Brief: A iostream-style memory buffer output stream, but no iostream usage which is too slow):
 //  stdio is not type-safe, but fast
 //  iostream is too slow , but type-safe

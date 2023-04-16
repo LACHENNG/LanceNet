@@ -133,3 +133,5 @@ images/
 *.jpeg
 *.jpg
 
+# clangd lsp server for vim language server support 
+.clangd/

@@ -1,18 +1,19 @@
 // Author : Lance(Lang Chen) @ nwpu
-// frontend
+// frontend, user visible include file
 #ifndef LanceNet_BASE_LOGGING_LOGGING_H
 #define LanceNet_BASE_LOGGING_LOGGING_H
 
-#include "LogStream.h"
+#include <iostream>
 #include <functional>
-#include "Time.h"
-#include "../ThisThread.h"
 
-#include "iostream"
-// #include <utility>
+#include <LanceNet/base/Time.h>
+#include <LanceNet/base/ThisThread.h>
+#include <LanceNet/base/noncopyable.h>
+#include <LanceNet/base/LogStream.h>
+#include <LanceNet/base/ColorText.h>
 
 #ifndef __GNUC__
-#warning "NOT GNUC, using strrchr instead of __builtin_strrchr"
+#warning "No GNUC Support, using strrchr instead of __builtin_strrchr"
     #include <string.h>
     #define __builtin_strrchr strrchr
 #endif
@@ -39,8 +40,10 @@ public:
         INFO,
         WARN,
         ERROR,
-        FATAL
+        FATAL,
+        NUM_LOG_LEVELS
     };
+    static const char* logLevelNames[LogLevel::NUM_LOG_LEVELS];
 
     static Logger::LogLevel logLevel();
     static void setLogLevel(Logger::LogLevel level);
@@ -58,13 +61,13 @@ public:
 
 
 public:
+    using TextColor_t = ColorText::TextColor;
     // ctors
     // Logger(CurrentFileName file, int lineNum);
-    Logger(CurrentFileName file, int lineNum, LogLevel level);
+    Logger(CurrentFileName file, int lineNum, LogLevel level, TextColor_t color = ColorText::NONE_COLOR);
     // Logger(CurrentFileName file, int lineNum, LogCallback cb);
     // Logger(CurrentFileName file, int lineNum, bool toAbort);
 
-    // stream style usage
     LogStream& stream();
 
 private:
@@ -72,38 +75,21 @@ private:
     // it actually buffer the log message
     class LogImpl{
     public:
+        LogImpl(LogLevel level, CurrentFileName file, int line, TextColor_t logLevelColor);
+        ~LogImpl();
 
-        LogImpl(LogLevel level, CurrentFileName file, int line)
-          : ts_(system_clock::now()),
-            level_(level),
-            filename_(file),
-            line_(line)
-        {
-            stream_ << makeMesHeader();
-        }
-
-        ~LogImpl()
-        {
-            char buf[32];
-            snprintf(buf, sizeof(buf)-1, " - %s:%d", filename_.c_str(), line_);
-            stream_ << buf;
-            std::cout << stream_.buffer() << std::endl;
-        }
-
-        LogStream& stream(){
-            return stream_;
-        }
-        std::string makeMesHeader(){
-            char buf[64];
-            snprintf(buf, sizeof(buf)-1, "%s %05d ", ts_.toFmtString().c_str(), ThisThread::Gettid());
-            return buf;
-        }
+        LogStream& stream();
+    private:
+        std::string makeMsgHeader();
+        std::string makeMsgTail();
+        void abort();
     private:
         TimeStamp ts_;
         LogStream stream_;
         LogLevel level_;
         CurrentFileName filename_;
         int line_;
+        TextColor_t logLevelColor_; 
     };
 
     LogImpl impl;
@@ -129,9 +115,16 @@ Logger::LogLevel setGlobalLogLevel(Logger::LogLevel level);
 
 } // namespace LanceNet
 
+// non color version
 #define LOG_WARN  LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::WARN).stream()
 #define LOG_INFO  LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::INFO).stream()
 #define LOG_FATAL LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::FATAL).stream()
+
+// color versoin
+#define LOG_WARNC  LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::WARN, LanceNet::ColorText::YELLOW).stream()
+#define LOG_INFOC  LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::INFO, LanceNet::ColorText::GREEN).stream()
+#define LOG_FATALC LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::FATAL, LanceNet::ColorText::RED).stream()
+
 
 
 #endif // LanceNet_BASE_LOGGING_LOGGING_H

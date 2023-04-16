@@ -1,10 +1,16 @@
-#ifndef BASE_UTILITY_H
-#define BASE_UTILITY_H 
 
+#ifndef BASE_NON_COPYABLE
+#define BASE_NON_COPYABLE
+
+namespace LanceNet
+{
+
+// tag class 
+// the derived class should have object rather that value senmatic
 class noncopyable{
 protected:
     noncopyable() = default;
-    ~noncopyable() = default; 
+    ~noncopyable() = default;
 
 public:
     /* copy ctor*/
@@ -14,4 +20,5 @@ public:
 
 };
 
-#endif //!BASE_UTILITY_H
+} // namespace LanceNet
+#endif //!BASE_NON_COPYABLE

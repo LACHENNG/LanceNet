@@ -17,6 +17,10 @@
 #include <assert.h>
 #include <sys/types.h> // gettid system call
 
+namespace LanceNet{
+
+namespace base{
+
 class Thread : noncopyable
 {
 public:
@@ -70,5 +74,9 @@ private:
     static void* startThread(void * obj);
 
 };
+
+} // namespace base
+  //
+} // namespace LanceNet
 
 #endif

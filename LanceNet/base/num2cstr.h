@@ -1,11 +1,16 @@
+#ifndef LanceNet_NUM2ASCII_H
+#define LanceNet_NUM2ASCII_H
 #include <algorithm>
 
 // itoa
 // Mattew Wilson 'Efficient Integer to String Conversions'
 // MT-Safe
 // the invoker have the responsible to allocated enough buf memory
+
+namespace LanceNet{
+
 template<typename IntegerType>
-const char* itoa_MW_s(char * dest, IntegerType integer)
+const char* itoa_s(char * dest, IntegerType integer)
 {
     bool isNegative = integer < 0 ? true : false;
     static const char dict[] = "9876543210123456789";
@@ -28,3 +33,6 @@ const char* itoa_MW_s(char * dest, IntegerType integer)
     return dest;
 }
 
+} // namespace LanceNet
+
+#endif // LanceNet_NUM2ASCII_H

@@ -9,11 +9,17 @@ set(SRC_LIST
     Thread.cpp
     unix_wrappers.cpp
     StringPiece.cpp
+    Time.cpp
+
+    ColorText.cpp
+    LogStream.cpp
+    Logging.cpp
 )
 
 add_library(
     ${LIB_NAME}
-    ${SRC_LIST})
+    ${SRC_LIST}
+)
 
 # target_include_directories(${PROJECT_NAME}
 #     INTERFACE
@@ -22,8 +28,13 @@ add_library(
 
 target_link_libraries(
     ${LIB_NAME}
-    PRIVATE
+    PUBLIC
     pthread
+    PRIVATE
+    LanceNet_net
 )
 
-add_subdirectory(logging)
+
+# add_subdirectory(logging)
+
+
