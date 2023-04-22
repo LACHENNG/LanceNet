@@ -8,6 +8,7 @@ project(LanceNet LANGUAGES CXX VERSION 1.0)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+set(CMAKE_BUILD_TYPE Debug)
 # Debug Purpose Only
 SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
 # add_definitions(-DDEBUG)
@@ -23,11 +24,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/LanceNet)
 
-
 # binary executable 
-message(===========================================)
-message(========${CMAKE_BINARY_DIR}================)
-message(===========================================)
-
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # install(TARGETS cltest )
