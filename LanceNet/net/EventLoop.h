@@ -4,9 +4,11 @@
 
 #include "LanceNet/base/ThisThread.h"
 #include "LanceNet/base/noncopyable.h"
+#include "LanceNet/base/Mutex.h"
 #include "LanceNet/net/IOMultiplexer.h"
 #include <atomic>
 #include <unordered_map>
+#include <functional>
 #include <vector>
 #include <memory>
 
@@ -16,7 +18,7 @@ namespace net
 {
 
 class EventLoop;
-class SockChannel;
+class FdChannel;
 // class IOMultiplexer;
 
 extern __thread EventLoop* tl_eventLoopPtrOfThisThread;
@@ -35,6 +37,7 @@ class EventLoop : noncopyable
 public:
     using self = EventLoop;
     using selfPtr = EventLoop*;
+    using PendFunction = std::function<void(void)>;
 
     EventLoop();
     ~EventLoop() = default;
@@ -49,24 +52,56 @@ public:
     // assert if is in Loop thread;
     void assertInEventLoopThread();
 
-    void update(SockChannel* sockChannel);
+    void update(FdChannel* fdChannel);
+    void remove(FdChannel* fdChannel);
 
     void quit();
 
+    // Transfers function execution from another thread to the current eventloop thread
+    void runInLoop(PendFunction pendingfunc);
+
 private:
-    // used thread local to simplify the implement
-    // static std::unordered_map<pid_t, selfPtr>& getTidToEventLoopMap();
+
+    // Transfer exection from other to EventLoop by eventfd + callback + pendingFuncions queue mechanism
+    class RunInLoopImpl
+    {
+    public:
+        explicit RunInLoopImpl(EventLoop* owner_loop);
+        ~RunInLoopImpl();
+        void pend(PendFunction func);
+
+    private:
+        // can only called in EventLoop thread
+        void doPendingFunctors();
+
+        // read and write eventfd
+        void wakeup();
+        void clearNotification();
+
+        int makeEventfd();
+
+        // eventfd for notifiying
+        int eventfd_;
+        std::unique_ptr<FdChannel> eventfdChannelUPtr_;
+
+        EventLoop* ower_loop_;
+        // pending functions
+        std::vector<PendFunction> pendingFuncs_; // Mutex Guarded
+        MutexLock mutex_;
+    };
 
     // the thread id of this EventLoop
     pid_t tid_;
     std::atomic_bool running_;
 
-    // active SockChannel that has events to be handled
-    std::vector<SockChannel*> activeSockChannels_;
+    // active FdChannel that has events to be handled
+    std::vector<FdChannel*> activeFdChannels_;
 
     // Poller to get active Sockchannels that have events to handle with;
     // IOMultiplexer* multiplexer_;
     std::unique_ptr<IOMultiplexer> multiplexer_;
+
+    std::unique_ptr<RunInLoopImpl> runInLoopImpl_;
 };
 
 } // namespace net

@@ -1,10 +1,15 @@
+#include "LanceNet/base/Mutex.h"
+#include "LanceNet/base/unix_wrappers.h"
 #include "LanceNet/base/ThisThread.h"
-#include "LanceNet/net/SockChannel.h"
+#include "LanceNet/net/FdChannel.h"
 #include <LanceNet/net/EventLoop.h>
 #include <LanceNet/net/IOMultiplexer.h>
 #include <LanceNet/base/Logging.h>
+
 #include <assert.h>
+#include <cstdint>
 #include <cstdlib>
+#include <sys/eventfd.h>
 
 namespace LanceNet
 {
@@ -19,7 +24,8 @@ __thread EventLoop* tl_eventLoopPtrOfThisThread;
 EventLoop::EventLoop()
   : tid_(ThisThread::Gettid()),
     running_(false),
-    multiplexer_(new IOMultiplexer(this))
+    multiplexer_(std::make_unique<IOMultiplexer>(this)),
+    runInLoopImpl_(std::make_unique<RunInLoopImpl>(this))
 {
     // only one instances is allowed in IO thread(EventLoop thread)
     assertCanCreateNewLoop();
@@ -27,20 +33,23 @@ EventLoop::EventLoop()
 }
 
 void EventLoop::StartLoop(){
+
     // StartLoop can only be called at EventLoop thread
     assertInEventLoopThread();
     assert(!running_);
     running_ = true;
 
+    //LOG_INFOC << "Eventloop::StartLoop at thread : " << ThisThread::Gettid();
+
     while(running_){
-        activeSockChannels_.clear();
+        activeFdChannels_.clear();
 
         // a negative timeout means infinite timeout
         int timeout = -1;
-        multiplexer_->poll(&activeSockChannels_, timeout);
+        multiplexer_->poll(&activeFdChannels_, timeout);
 
-        for(auto SockChannelPtr : activeSockChannels_){
-            SockChannelPtr->handleEvents();
+        for(auto FdChannelPtr : activeFdChannels_){
+            FdChannelPtr->handleEvents();
         }
     }
 }
@@ -48,7 +57,7 @@ void EventLoop::StartLoop(){
 void EventLoop::assertInEventLoopThread()
 {
     if(tid_ != ThisThread::Gettid()){
-        LOG_FATALC << "assertInEventLoopThread failed, EventLoop is created at thread with id : " << tid_ << " but invoke at another thread with id : " << ThisThread::Gettid();
+        LOG_FATALC << "assertInEventLoopThread failed, EventLoop is created at thread with id : " << tid_ << " but this assertion is invoked at thread with id : " << ThisThread::Gettid();
         exit(EXIT_FAILURE);
     }
 }
@@ -64,14 +73,20 @@ void EventLoop::assertCanCreateNewLoop()
 
 EventLoop* EventLoop::getEventLoopOfThisThread()
 {
-    static std::unordered_map<pid_t, EventLoop*> s_umap;
+    //static std::unordered_map<pid_t, EventLoop*> s_umap;
 
-    return s_umap[ThisThread::Gettid()];
+    //return s_umap[ThisThread::Gettid()];
+    return tl_eventLoopPtrOfThisThread;
 }
 
-void EventLoop::update(SockChannel* sockChannel)
+void EventLoop::update(FdChannel* sockChannel)
 {
-    multiplexer_->updateSockChannel(sockChannel);
+    multiplexer_->updateFdChannel(sockChannel);
+}
+
+void EventLoop::remove(FdChannel* sockChannel)
+{
+    multiplexer_->removeFdChannel(sockChannel);
 }
 
 void EventLoop::quit()
@@ -79,15 +94,75 @@ void EventLoop::quit()
     running_ = false;
 }
 
-// I use thread local to optimize usage
-// std::unordered_map<pid_t, EventLoop*>& EventLoop::getTidToEventLoopMap()
-// {
-//     static std::unordered_map<pid_t, EventLoop*> s_umap;
-//     return s_umap;
-//
-// }
+void EventLoop::runInLoop(PendFunction pendingfunc)
+{
+    //if(!running_) LOG_WARNC << "the EventLoop is not started yet";
+    runInLoopImpl_->pend(std::move(pendingfunc));
+}
 
+
+EventLoop::RunInLoopImpl::RunInLoopImpl(EventLoop* owner_loop)
+  : eventfd_(makeEventfd()),
+    eventfdChannelUPtr_(std::make_unique<FdChannel>(owner_loop, eventfd_)),
+    ower_loop_(owner_loop)
+{
+    eventfdChannelUPtr_->setReadCallback(std::bind(&EventLoop::RunInLoopImpl::doPendingFunctors, this));
+    eventfdChannelUPtr_->enableReading();
+}
+
+EventLoop::RunInLoopImpl::~RunInLoopImpl()
+{
+    // the eventfd is auto closed by dtor of FdChannel
+    // the fdChannel is auto removed from owner_loop_;
+}
+
+void EventLoop::RunInLoopImpl::doPendingFunctors()
+{
+    ower_loop_->assertInEventLoopThread();
+
+    // swap to locals can reduce the critical zone and avoid dead lock as the pending functions may call runInLoop() too.
+    std::vector<PendFunction> functions;
+    {
+    MutexLockGuard lock(mutex_);
+    functions.swap(pendingFuncs_);
+    }
+
+    for(auto& pendingfunc : functions)
+    {
+        pendingfunc();
+    }
+    clearNotification();
+}
+
+void EventLoop::RunInLoopImpl::pend(EventLoop::PendFunction func)
+{
+
+    MutexLockGuard lock(mutex_);
+    LOG_WARNC << "RunInLoopImpl::pend() called";
+    pendingFuncs_.push_back(std::move(func));
+    wakeup();
+}
+
+void EventLoop::RunInLoopImpl::wakeup()
+{
+    // wirte to eventfd so that it will become readable
+    //LOG_INFOC << "RunInLoopImpl::wakeup()";
+    uint64_t __ = 1;
+    Write(eventfd_, &__, sizeof(uint64_t));
+}
+
+void EventLoop::RunInLoopImpl::clearNotification()
+{
+    //LOG_INFOC << "RunInLoopImpl::clearnotify()";
+    uint64_t __;
+    Read(eventfd_, &__, sizeof(uint64_t));
+}
+
+int EventLoop::RunInLoopImpl::makeEventfd()
+{
+    int fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+    return fd;
+}
 
 } // namespace net
 } // namespace LanceNet
-
