@@ -12,7 +12,7 @@ TimeStamp::TimeStamp()
 {
 }
 
-TimeStamp::TimeStamp(timepoint timepoint)
+TimeStamp::TimeStamp(Timepoint timepoint)
   : time_point_(timepoint)
 {
 }
@@ -73,6 +73,22 @@ TimeStamp TimeStamp::illegal()
 TimeStamp TimeStamp::now()
 {
     return TimeStamp(system_clock::now());
+}
+
+TimeStamp TimeStamp::addSeconds(TimeStamp basetime, double secs)
+{
+
+    auto newTimepoint = basetime.getTimePoint() + std::chrono::nanoseconds(static_cast<long>(secs*1e9));
+    return TimeStamp(newTimepoint);
+}
+
+double getDiffInSeconds(TimeStamp t1, TimeStamp t2)
+{
+    if(t1 >= t2) std::swap(t1, t2);
+
+    auto duration = t2.getTimePoint() - t1.getTimePoint();
+    int64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
+   return nanoseconds * 1e-9;
 }
 
 /* GET ELAPSED TIME IN second PRECSION */
