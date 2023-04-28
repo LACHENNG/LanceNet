@@ -9,8 +9,9 @@ message("====================================")
 set(SRC_LIST
     Buffer.cpp
     EventLoop.cpp
+    EventLoopThread.cpp
     IOMultiplexer.cpp
-    SockChannel.cpp
+    FdChannel.cpp
 )
 
 add_library(LanceNet_net ${SRC_LIST})
