@@ -62,6 +62,11 @@ void EventLoop::assertInEventLoopThread()
     }
 }
 
+bool EventLoop::isInEventLoopThread()
+{
+    return tid_ == ThisThread::Gettid();
+}
+
 void EventLoop::assertCanCreateNewLoop()
 {
     if(tl_eventLoopPtrOfThisThread != NULL)
@@ -96,8 +101,14 @@ void EventLoop::quit()
 
 void EventLoop::runInLoop(PendFunction pendingfunc)
 {
-    //if(!running_) LOG_WARNC << "the EventLoop is not started yet";
-    runInLoopImpl_->pend(std::move(pendingfunc));
+    // If the current thread is EventLoop thread, call the function synchronously, otherwise pend
+    if(isInEventLoopThread()){
+        pendingfunc();
+    }
+    else{
+        //if(!running_) LOG_WARNC << "the EventLoop is not started yet";
+        runInLoopImpl_->pend(std::move(pendingfunc));
+    }
 }
 
 
@@ -138,7 +149,6 @@ void EventLoop::RunInLoopImpl::pend(EventLoop::PendFunction func)
 {
 
     MutexLockGuard lock(mutex_);
-    LOG_WARNC << "RunInLoopImpl::pend() called";
     pendingFuncs_.push_back(std::move(func));
     wakeup();
 }

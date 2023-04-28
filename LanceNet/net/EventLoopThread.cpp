@@ -27,6 +27,7 @@ void EventLoopThread::createEventLoopAndLaunch()
     EventLoopPtr_.reset(new EventLoop());
     // notify that eventloop is create and ready
     latch_.countdown();
+
     EventLoopPtr_->StartLoop();
 }
 

@@ -22,8 +22,9 @@ public:
     EventLoopThread();
     ~EventLoopThread();
 
-    // start event loop, and return if the eventloop is really and started
+    // start event loop, and return if the eventloop is ready and launch
     std::shared_ptr<EventLoop> StartLoop();
+
 
 private:
     void createEventLoopAndLaunch();

@@ -51,6 +51,7 @@ public:
 
     // assert if is in Loop thread;
     void assertInEventLoopThread();
+    bool isInEventLoopThread();
 
     void update(FdChannel* fdChannel);
     void remove(FdChannel* fdChannel);
