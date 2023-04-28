@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <cstdlib>
 
-#include <LanceNet/net/SockChannel.h>
+#include <LanceNet/net/FdChannel.h>
 #include <LanceNet/net/IOMultiplexer.h>
 #include <LanceNet/base/Time.h>
 #include <LanceNet/base/Logging.h>
@@ -19,7 +19,7 @@ IOMultiplexer::IOMultiplexer(EventLoop* loop)
 }
 
 
-TimeStamp IOMultiplexer::poll(SockChannelList* activeChannels, int timeout)
+TimeStamp IOMultiplexer::poll(FdChannelList* activeChannels, int timeout)
 {
     assertInEventLoopThread();
     // int poll(struct pollfd *fds, nfds_t nfds, int timeout);
@@ -44,13 +44,13 @@ TimeStamp IOMultiplexer::poll(SockChannelList* activeChannels, int timeout)
     return ts;
 }
 
-// using the new SockChannel which contains user interested events and update to corresponding pollfd.events
+// using the new FdChannel which contains user interested events and update to corresponding pollfd.events
 
 // update the internal events from @para channel
 // insert a new or update an existing channel takes O(1) time
 // also, update a existing one take O(1) time  as @para channel remembered the index in pollfds_;
 //
-void IOMultiplexer::updateSockChannel(SockChannel* channel)
+void IOMultiplexer::updateFdChannel(FdChannel* channel)
 {
     // FIXME: is this right ?
     assertInEventLoopThread();
@@ -78,14 +78,25 @@ void IOMultiplexer::updateSockChannel(SockChannel* channel)
     }
 }
 
+// FIXME: complete the implementation
+void IOMultiplexer::removeFdChannel(FdChannel *sockChannel)
+{
+    int fd = sockChannel->fd();
+    auto iter = fdMap_.find(fd);
+    assert(iter != fdMap_.end());
+
+    fdMap_.erase(iter);
+    
+}
+
 void IOMultiplexer::assertInEventLoopThread()
 {
     owner_loop_->assertInEventLoopThread();
 }
 
-// find all active events and push its corresponding SockChannel to @parameter activeChannels
-// current active revents will be stored into SockChannel
-void IOMultiplexer::fillActiveChannels(int numEvents, SockChannelList* activeChannels)
+// find all active events and push its corresponding FdChannel to @parameter activeChannels
+// current active revents will be stored into FdChannel
+void IOMultiplexer::fillActiveChannels(int numEvents, FdChannelList* activeChannels)
 {
     for(int i = 0; i < static_cast<int>(fdlist_.size()) && numEvents > 0; i++)
     {
@@ -100,7 +111,7 @@ void IOMultiplexer::fillActiveChannels(int numEvents, SockChannelList* activeCha
             if(iter != fdMap_.end())
             {
                 assert(fdMap_[fd]->fd() == fd);
-                // set revents of SockChannel so that the event can be handled
+                // set revents of FdChannel so that the event can be handled
                 fdMap_[fd]->revents(pollfd.revents);
                 activeChannels->push_back(fdMap_[fd]);
             }

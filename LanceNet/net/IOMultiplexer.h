@@ -1,3 +1,6 @@
+// Author : Lance @ nwpu
+// A IO multiplexing class that monitoring interested IO events
+//
 #ifndef LanceNet_BASE_POLLER_H
 #define LanceNet_BASE_POLLER_H
 #include <vector>
@@ -20,42 +23,42 @@ namespace net
 {
 
 class EventLoop;
-class SockChannel;
+class FdChannel;
 
 // IO multiplexing class
 // This poll should noly be invoked by EventLoop (IO) thread
-// It manage pollfds and mapping from fd to SockChannel*
+// It manage pollfds and mapping from fd to FdChannel*
 //
 class IOMultiplexer
 {
 public:
-    using SockChannelList= std::vector<SockChannel*>;
-    using FdMap = std::unordered_map<int, SockChannel*>;
+    using FdChannelList= std::vector<FdChannel*>;
+    using FdMap = std::unordered_map<int, FdChannel*>;
 
     IOMultiplexer(EventLoop* loop);
     ~IOMultiplexer() = default;
 
     // Polls the I/O events
     // must be called in EvnetLoop thread
-    TimeStamp poll(SockChannelList* activeChannels, int timeout);
+    TimeStamp poll(FdChannelList* activeChannels, int timeout);
 
-    void updateSockChannel(SockChannel* activeChannes);
-
+    void updateFdChannel(FdChannel* activeChannes);
+    void removeFdChannel(FdChannel* sockChannel);
 
 private:
     void assertInEventLoopThread();
     // helper function for IOMultiplexer::poll()
-    void fillActiveChannels(int numActiveEvents, SockChannelList* activeChannels);
+    void fillActiveChannels(int numActiveEvents, FdChannelList* activeChannels);
 
 private:
     using PollFdList = std::vector<struct pollfd>;
 
     EventLoop* owner_loop_;
 
-    // SockChannelList sockChannelList_;
+    // FdChannelList sockChannelList_;
     PollFdList fdlist_;
 
-    // Mapping from fd to SockChannel*
+    // Mapping from fd to FdChannel*
     FdMap fdMap_;
 };
 
