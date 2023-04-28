@@ -135,3 +135,4 @@ images/
 
 # clangd lsp server for vim language server support 
 .clangd/
+*.idx

@@ -11,6 +11,28 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_BUILD_TYPE Debug)
 # Debug Purpose Only
 SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
+
+set(CXX_FLAGS
+ -g
+ # -DVALGRIND
+ -DCHECK_PTHREAD_RETURN_VALUE
+ -D_FILE_OFFSET_BITS=64
+ -Wall
+ -Wextra
+ -Werror
+ -Wconversion
+ -Wno-unused-parameter
+ -Wold-style-cast
+ -Woverloaded-virtual
+ -Wpointer-arith
+ -Wshadow
+ -Wwrite-strings
+ -march=native
+ # -MMD
+ -std=c++11
+ -rdynamic
+ )
+
 # add_definitions(-DDEBUG)
 
 include_directories(${PROJECT_SOURCE_DIR})
