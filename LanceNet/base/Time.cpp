@@ -82,7 +82,7 @@ TimeStamp TimeStamp::addSeconds(TimeStamp basetime, double secs)
     return TimeStamp(newTimepoint);
 }
 
-double getDiffInSeconds(TimeStamp t1, TimeStamp t2)
+double TimeStamp::getDiffInSeconds(TimeStamp t1, TimeStamp t2)
 {
     if(t1 >= t2) std::swap(t1, t2);
 
