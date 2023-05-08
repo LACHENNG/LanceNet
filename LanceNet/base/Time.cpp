@@ -82,13 +82,11 @@ TimeStamp TimeStamp::addSeconds(TimeStamp basetime, double secs)
     return TimeStamp(newTimepoint);
 }
 
-double TimeStamp::getDiffInSeconds(TimeStamp t1, TimeStamp t2)
+int64_t TimeStamp::getDiffInNanoSeconds(TimeStamp t1, TimeStamp t2)
 {
-    if(t1 >= t2) std::swap(t1, t2);
-
     auto duration = t2.getTimePoint() - t1.getTimePoint();
     int64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
-   return nanoseconds * 1e-9;
+   return nanoseconds;
 }
 
 /* GET ELAPSED TIME IN second PRECSION */

@@ -22,6 +22,8 @@ class TimeStamp : copyable{
 public:
     using Timepoint = time_point<system_clock>;
     static const int MicroSecondsPerSecond = 1e6;
+    static const int NanoSecondsPerSecond = 1e9;
+    static const int MilliSecondsPerSecond = 1e9;
     // ctors
     // construct a TimeStamp represents invalid time
     TimeStamp();
@@ -42,7 +44,7 @@ public:
 
     //arithmetics
     static TimeStamp addSeconds(TimeStamp basetime, double secs);
-    static double getDiffInSeconds(TimeStamp t1, TimeStamp t2);
+    static int64_t getDiffInNanoSeconds(TimeStamp t1, TimeStamp t2);
 
     // observer
     bool isValid(){ return !(time_point_ == Timepoint::min());}
@@ -73,9 +75,14 @@ inline bool operator==(const TimeStamp lhs, const TimeStamp rhs)
     return lhs.getTimePoint() == rhs.getTimePoint();
 }
 
+inline bool operator<=(const TimeStamp lhs, const TimeStamp rhs)
+{
+    return lhs < rhs || lhs == rhs;
+}
+
 inline bool operator>=(const TimeStamp lhs, const TimeStamp rhs)
 {
-    return !(lhs.getTimePoint() < rhs.getTimePoint());
+    return !( lhs < rhs);
 }
 
 // Arithmetics
