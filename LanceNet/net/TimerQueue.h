@@ -3,7 +3,11 @@
 #ifndef LanceNet_NET_TIMER_QUEQUE_H
 #define LanceNet_NET_TIMER_QUEQUE_H
 #include "LanceNet/base/Time.h"
+#include "LanceNet/base/noncopyable.h"
+#include <memory>
 #include <vector>
+#include <functional>
+#include <queue>
 #include <functional>
 #include <set>
 
@@ -30,43 +34,56 @@ class TimerId;
 // however the timerfd is notified by the kernel in time as it is usually reset
 // by timerfd_settime to the next expiration of the next unexpired `Timer`s
 //
-class TimerQueue
+class TimerQueue : noncopyable
 {
 public:
-    using TimerUPtr = std::unique_ptr<Timer>;
+    // Note: I not use unique_ptr as it not work well when 
+    // using std::bind to get a std::function<void()> functor as 
+    // std::function only support CopyConstructible callable
+    using TimerPtr = std::shared_ptr<Timer>;
 
     TimerQueue(EventLoop* loop);
     ~TimerQueue();
 
     // add a timer to queue
     // thread safe
-    void addTimer(TimerUPtr timer, double delay);
+    TimerId addTimer(TimerPtr timer);
 
-    // get the timer that has expired so far
+    // cancel a timer
     // thread safe
-    std::vector<TimerUPtr> getExpired(TimeStamp now);
+    void cancelTimer(TimerId timerid);
 
 private:
-    using Callback = std::function<void ()>;
-    using Entry = std::pair<TimeStamp, TimerUPtr>;
+    using Callback = std::function<void (Timer*)>;
+    using Entry = std::pair<TimeStamp, TimerPtr>;
+    using EntryRaw = std::pair<TimeStamp, Timer*>;
 
-    int createTimerfd();
+    void _addTimer(TimerPtr timer);
+    void _cancelTimer(TimerId timerid);
 
+    // get the timer that has expired so far
+    std::vector<TimerPtr> getExpired(TimeStamp now);
+
+    // callback on alarms of timerfd_
     void handleTimeouts();
 
+    int createTimerfd();
     // add a new timer, return if it is the earliest one that expiration
-    bool insertTimer(TimerUPtr timer, double delaySeconds);
+    bool insertTimer(TimerPtr timer);
 
     // reset Timerfd to alarm at newAlarmTime
     void resetTimerfd(TimeStamp newAlarmTime);
-    // reset timerfd according to the given expired timers.
-    void reset(const std::vector<Entry>& expiredTimers);
 
+    // reset timerfd according to the given expired timers.
+    void reset(std::vector<TimerPtr>& expiredTimers);
+
+    // helper to get a itimerspec struct of difference of two TimeStamp
     itimerspec getAbsTimeSpec(TimeStamp now, TimeStamp future);
 
 private:
-    // sorted by expiration, managing timer and can easily get expired timers in lg(N) time
-    std::set<Entry> timerList_;
+    EventLoop* owner_loop_;
+
+    std::priority_queue<Entry, std::vector<Entry>, std::greater<Entry>> timer_que_;
 
     int timerfd_;
     // used to observe timerfd events
@@ -74,9 +91,11 @@ private:
 
      // for cancel()
     std::set<TimerId>  cancelingTimers_;
+    std::set<TimerId> activeTimers_;
 };
 
-} // namespace net
-}// namespace LanceNet
- //
+
+}  // namespace net
+}  // namespace LanceNet
+
 #endif // LanceNet_NET_TIMER_QUEQUE_H
