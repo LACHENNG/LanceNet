@@ -3,9 +3,12 @@
 #define LanceNet_NET_EVENTLOOP_H
 
 #include "LanceNet/base/ThisThread.h"
+#include "LanceNet/base/Time.h"
 #include "LanceNet/base/noncopyable.h"
 #include "LanceNet/base/Mutex.h"
 #include "LanceNet/net/IOMultiplexer.h"
+#include "LanceNet/net/TimerId.h"
+
 #include <atomic>
 #include <unordered_map>
 #include <functional>
@@ -19,7 +22,9 @@ namespace net
 
 class EventLoop;
 class FdChannel;
+class TimerQueue;
 // class IOMultiplexer;
+//
 
 extern __thread EventLoop* tl_eventLoopPtrOfThisThread;
 // Multi-instances is one thread is not allow
@@ -37,10 +42,11 @@ class EventLoop : noncopyable
 public:
     using self = EventLoop;
     using selfPtr = EventLoop*;
-    using PendFunction = std::function<void(void)>;
+    using Callback = std::function<void()>;
+    using PendFunction = Callback;
 
     EventLoop();
-    ~EventLoop() = default;
+    ~EventLoop();
 
     // start event loop
     void StartLoop();
@@ -59,16 +65,20 @@ public:
     void quit();
 
     // Transfers function execution from another thread to the current eventloop thread
-    void runInLoop(PendFunction pendingfunc);
+    void runInLoop(PendFunction pendingfunc); //sematic
+
+    // A more useful wrapper to use TimerQueue
+    TimerId runAt(TimeStamp when , Callback whatFunc, double delaySecs = 0);
+    TimerId runEvery(TimeStamp start, double interval, Callback whatFunc);
 
 private:
-
     // Transfer exection from other to EventLoop by eventfd + callback + pendingFuncions queue mechanism
     class RunInLoopImpl
     {
     public:
         explicit RunInLoopImpl(EventLoop* owner_loop);
         ~RunInLoopImpl();
+
         void pend(PendFunction func);
 
     private:
@@ -76,8 +86,8 @@ private:
         void doPendingFunctors();
 
         // read and write eventfd
-        void wakeup();
-        void clearNotification();
+        void writeEventfd();
+        void readEventfdOnce();
 
         int makeEventfd();
 
@@ -103,6 +113,8 @@ private:
     std::unique_ptr<IOMultiplexer> multiplexer_;
 
     std::unique_ptr<RunInLoopImpl> runInLoopImpl_;
+
+    std::unique_ptr<TimerQueue> timerQueueUptr_;
 };
 
 } // namespace net

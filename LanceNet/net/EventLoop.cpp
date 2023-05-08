@@ -1,6 +1,9 @@
 #include "LanceNet/base/Mutex.h"
+#include "LanceNet/base/Time.h"
 #include "LanceNet/base/unix_wrappers.h"
 #include "LanceNet/base/ThisThread.h"
+#include <LanceNet/net/TimerQueue.h>
+#include "LanceNet/net/Timer.h"
 #include "LanceNet/net/FdChannel.h"
 #include <LanceNet/net/EventLoop.h>
 #include <LanceNet/net/IOMultiplexer.h>
@@ -25,11 +28,16 @@ EventLoop::EventLoop()
   : tid_(ThisThread::Gettid()),
     running_(false),
     multiplexer_(std::make_unique<IOMultiplexer>(this)),
-    runInLoopImpl_(std::make_unique<RunInLoopImpl>(this))
+    runInLoopImpl_(std::make_unique<RunInLoopImpl>(this)),
+    timerQueueUptr_(std::make_unique<TimerQueue>(this))
 {
     // only one instances is allowed in IO thread(EventLoop thread)
     assertCanCreateNewLoop();
     tl_eventLoopPtrOfThisThread = this;
+}
+
+EventLoop::~EventLoop()
+{
 }
 
 void EventLoop::StartLoop(){
@@ -99,18 +107,37 @@ void EventLoop::quit()
     running_ = false;
 }
 
-void EventLoop::runInLoop(PendFunction pendingfunc)
+void EventLoop::runInLoop(PendFunction functor)
 {
     // If the current thread is EventLoop thread, call the function synchronously, otherwise pend
     if(isInEventLoopThread()){
-        pendingfunc();
+        functor();
     }
     else{
         //if(!running_) LOG_WARNC << "the EventLoop is not started yet";
-        runInLoopImpl_->pend(std::move(pendingfunc));
+        runInLoopImpl_->pend(functor);
     }
 }
 
+TimerId EventLoop::runAt(TimeStamp when, Callback what, double delaySecs)
+{
+    //auto addtimer = [=](){
+    //    auto timer = std::make_unique<Timer>(when + delaySecs, what);
+    //    timerQueueUptr_->addTimer(std::move(timer));
+    //};
+    //runInLoop(addtimer);
+    auto newWhen = when + delaySecs;
+    auto timer = std::make_shared<Timer>(newWhen + delaySecs, what);
+    auto timerid = timerQueueUptr_->addTimer(timer);
+    return timerid;
+}
+
+TimerId EventLoop::runEvery(TimeStamp start, double interval, Callback whatFunc)
+{
+    auto timer = std::make_shared<Timer>(start , whatFunc, true, interval);
+    auto timerid = timerQueueUptr_->addTimer(timer);
+    return timerid;
+}
 
 EventLoop::RunInLoopImpl::RunInLoopImpl(EventLoop* owner_loop)
   : eventfd_(makeEventfd()),
@@ -134,38 +161,38 @@ void EventLoop::RunInLoopImpl::doPendingFunctors()
     // swap to locals can reduce the critical zone and avoid dead lock as the pending functions may call runInLoop() too.
     std::vector<PendFunction> functions;
     {
-    MutexLockGuard lock(mutex_);
-    functions.swap(pendingFuncs_);
+        MutexLockGuard lock(mutex_);
+        functions.swap(pendingFuncs_);
     }
 
     for(auto& pendingfunc : functions)
     {
         pendingfunc();
     }
-    clearNotification();
+    readEventfdOnce();
 }
 
 void EventLoop::RunInLoopImpl::pend(EventLoop::PendFunction func)
 {
-
     MutexLockGuard lock(mutex_);
-    pendingFuncs_.push_back(std::move(func));
-    wakeup();
+    pendingFuncs_.push_back(func);
+    writeEventfd();
 }
 
-void EventLoop::RunInLoopImpl::wakeup()
+void EventLoop::RunInLoopImpl::writeEventfd()
 {
     // wirte to eventfd so that it will become readable
-    //LOG_INFOC << "RunInLoopImpl::wakeup()";
+    //LOG_INFOC << "RunInLoopImpl::writeEventfd()";
     uint64_t __ = 1;
     Write(eventfd_, &__, sizeof(uint64_t));
 }
 
-void EventLoop::RunInLoopImpl::clearNotification()
+void EventLoop::RunInLoopImpl::readEventfdOnce()
 {
     //LOG_INFOC << "RunInLoopImpl::clearnotify()";
     uint64_t __;
-    Read(eventfd_, &__, sizeof(uint64_t));
+    int n = Read(eventfd_, &__, sizeof(uint64_t));
+    assert(sizeof(uint64_t) == n);
 }
 
 int EventLoop::RunInLoopImpl::makeEventfd()
