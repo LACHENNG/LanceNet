@@ -2,7 +2,7 @@
 
 #include "LanceNet/base/Time.h"
 #include <LanceNet/net/Timer.h>
-
+#include <LanceNet/base/Logging.h>
 namespace LanceNet
 {
 namespace net
@@ -14,19 +14,23 @@ Timer::Timer(TimeStamp expiration, Callback onAlarmCb, bool repeat, double inter
   : timeExpiration_(expiration),
     onAlarmCb_(onAlarmCb),
     repeat_(repeat),
-    intervalSecs_(0.0)
+    intervalSecs_(intervalSecs),
+    id_(getAndIncreaseId())
 {
-    numTimersCreated++;
+
+    LOG_INFOC << "Timer::Timer() with id= "  << id_;
 }
 
 Timer::~Timer()
 {
+    LOG_INFOC << "~Timer() with id= "  << id_;
     numTimersCreated--;
 }
 
 void Timer::OnExpiration()
 {
     assert(TimeStamp::now() >= timeExpiration_);
+    LOG_INFOC << "Timer with id = " << id() << " OnExpiration()";
     onAlarmCb_();
 }
 
@@ -50,14 +54,14 @@ void Timer::restartTimer()
     }
 }
 
-TimerId Timer::getMyTimerId()
+int64_t Timer::id()
 {
-    return TimerId(this, getNumTimerCreated());
+    return id_;
 }
 
-int64_t Timer::getNumTimerCreated()
+int64_t Timer::getAndIncreaseId()
 {
-    return Timer::numTimersCreated;
+    return ++Timer::numTimersCreated;
 }
 
 bool Timer::isRepeat() const

@@ -37,9 +37,11 @@ public:
     // restart timer, which reset the expiration base on time now
     void restartTimer();
 
-    TimerId getMyTimerId();
+    int64_t id();
 
-    static int64_t getNumTimerCreated();
+private:
+    static int64_t getAndIncreaseId();
+
 
 private:
     TimeStamp timeExpiration_;
@@ -49,11 +51,12 @@ private:
     // the interval
     double intervalSecs_;
 
+    int64_t id_;
     static std::atomic_int64_t numTimersCreated;
 };
 
-} // namespace net
 
+} // namespace net
 } // namespace LanceNet
 
 
