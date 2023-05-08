@@ -4,9 +4,11 @@ namespace LanceNet
 namespace net
 {
 
+
+
 TimerId::TimerId()
   : timer_(nullptr),
-    id_(0)
+    id_(-1)
 {
 }
 
@@ -15,6 +17,12 @@ TimerId::TimerId(Timer* timer, int64_t id)
     id_(id)
 {
 }
+
+int64_t TimerId::id() const
+{
+    return id_;
+}
+
 
 } // namespace net
 } // namespace LanceNet
