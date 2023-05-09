@@ -6,11 +6,11 @@ add_executable(loop_test2 event002.cpp)
 add_executable(loop_test3 event003.cpp)
 add_executable(fdChanneltest fdChanneltest.cpp)
 add_executable(eventLooptest eventLooptestwithTimerfd.cpp)
-add_executable(runinlooptest runInLoop_test.cpp)
 add_executable(EventLoopThreadtest EventLoopThreadtest.cpp)
+add_executable(HeterLookUpAndSetExtract HeterLookUpAndSetExtract.cpp )
 #add_executable(loop_test event001.cpp)
-
-
+add_executable(TimeQueue_EventLoop_test TimeQueue_EventLoop_test.cpp )
+add_executable(runInLoop_test runInLoop_test.cpp )
 
 target_link_libraries(buffer_test PRIVATE
     LanceNet_net
@@ -51,14 +51,23 @@ target_link_libraries(eventLooptest PRIVATE
     LanceNet_base
 )
 
-target_link_libraries(runinlooptest PRIVATE
-    LanceNet_net
-    LanceNet_base
-)
 
 target_link_libraries(EventLoopThreadtest PRIVATE
     LanceNet_net
     LanceNet_base
 )
 
+target_link_libraries(HeterLookUpAndSetExtract PRIVATE
+    LanceNet_net
+    LanceNet_base
+)
+target_link_libraries(TimeQueue_EventLoop_test PRIVATE
+    LanceNet_net
+    LanceNet_base
+)
+
+target_link_libraries(runInLoop_test PRIVATE
+    LanceNet_net
+    LanceNet_base
+)
 
