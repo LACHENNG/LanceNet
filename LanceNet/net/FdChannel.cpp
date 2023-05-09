@@ -50,6 +50,7 @@ void FdChannel::handleEvents()
 
 void FdChannel::enableReading()
 {
+    LOG_INFOC << "registered reading event for fd = " << fd();
     registInterestedEvent(kReadEvent);
 }
 

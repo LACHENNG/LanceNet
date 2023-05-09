@@ -13,7 +13,7 @@ class EventLoop;
 
 // Socket Event dispatch for every single fd
 // Every single FdChannel is owned by a IO thread(EventLoop thread)
-//
+// It basically represents IO handlers
 // Contains a socket fd but do not own it, the owner loop is responsible for closing it
 // Must unregister itself when dtor
 
@@ -43,7 +43,7 @@ public:
     void index(int newIndex);    // set index in pollfd
 
     // let the interested events take effect.
-    // (change interested evnets)
+    // (change interested events)
     void enableReading();
 
 private:

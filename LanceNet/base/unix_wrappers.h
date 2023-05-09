@@ -4,6 +4,7 @@
  */
 
 #pragma once
+#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/timerfd.h>
@@ -20,11 +21,14 @@
 #include <arpa/inet.h>
 #include <memory>
 
+#include <fcntl.h>
+
 #include <sys/eventfd.h>
 /* defined by glic*/
 // extern int errno;
 
 typedef struct sockaddr SA;
+typedef struct sockaddr_in SA_IN;
 
 /* show error msg relate to errno and exit*/
 #define handle_error(msg)   \
@@ -53,7 +57,9 @@ void Getaddrinfo(const char *node, const char *service,
                        struct addrinfo **res);
 
 /* Wrappers for client/server helper functinos*/
-int Open_clientfd(const char *hostname, int port);
+// return a nonblock fd
+int Open_clientfd(const char *hostname, int port, bool nonblock = true);
+
 int Open_listenfd(int port);
 
 
@@ -61,5 +67,4 @@ int Timerfd_create(__clockid_t __clock_id, int __flags);
 void Timerfd_settime(int __ufd, int __flags, const struct itimerspec *newValue, struct itimerspec *oldValue);
 
 void Close(int fd);
-
 

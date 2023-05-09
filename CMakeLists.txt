@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.0)
 project(LanceNet LANGUAGES CXX VERSION 1.0)
 
 # specify teh c++ standard
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17) # Heterogeneous Lookup require C++14 , set.extract requires C++17
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 set(CMAKE_BUILD_TYPE Debug)

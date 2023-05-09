@@ -1,4 +1,5 @@
 #include "LanceNet/base/unix_wrappers.h"
+#include <netdb.h>
 #include <sys/timerfd.h>
 
 /* utils */
@@ -77,7 +78,7 @@ int Accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen){
 
 
 /* Wrappers for client/server helper functinos*/
-int Open_clientfd(const char *hostname, int port){
+int Open_clientfd(const char *hostname, int port, bool nonblock){
     /* Obtain address(es) matching host/port */
     struct addrinfo hints;
     bzero(&hints, sizeof(struct addrinfo));
@@ -110,6 +111,17 @@ int Open_clientfd(const char *hostname, int port){
     delete [] sport;
     freeaddrinfo(listp);
 
+    if(nonblock)
+    {
+        int flags = fcntl (clientfd, F_GETFL, 0);
+        if (flags == -1) {
+            herror("fcntl");
+        }
+        flags |= (O_NONBLOCK | O_CLOEXEC);
+        if (fcntl (clientfd, F_SETFL, flags) == -1) {
+            herror("fcntl");
+        }
+    }
     return clientfd;
 }
 
@@ -201,3 +213,6 @@ void Close(int fd)
         handle_error("close()");
     }
 }
+
+//void Fcntl(){
+//}
