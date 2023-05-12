@@ -27,6 +27,7 @@ FdChannel::~FdChannel()
 {
     owner_loop_->remove(this);
     Close(fd_);
+    LOG_INFOC << "FdChannel[fd=" << fd_ << "]" << " unregistered and closed";
 }
 
 void FdChannel::handleEvents()

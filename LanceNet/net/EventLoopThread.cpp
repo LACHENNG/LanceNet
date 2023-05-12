@@ -17,6 +17,7 @@ EventLoopThread::EventLoopThread()
 
 EventLoopThread::~EventLoopThread()
 {
+    // FIXME: quit or leave it along ?
     EventLoopPtr_->quit();
     loopThread_.join();
 }
