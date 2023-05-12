@@ -18,6 +18,8 @@ set(SRC_LIST
     TimerQueue.cpp
 
     Acceptor.cpp
+    TcpServer.cpp
+    TcpConnection.cpp
 )
 
 add_library(LanceNet_net ${SRC_LIST})

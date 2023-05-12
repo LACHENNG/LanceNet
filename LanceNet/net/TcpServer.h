@@ -1,0 +1,71 @@
+// Author : Lance @ nwpu
+#ifndef LanceNet_NET_TCPSERVER_H
+#define LanceNet_NET_TCPSERVER_H
+
+#include "LanceNet/base/noncopyable.h"
+#include "LanceNet/base/unix_wrappers.h"
+
+#include <functional>
+#include <unordered_map>
+#include <memory>
+#include <sys/socket.h>
+
+namespace LanceNet
+{
+namespace net
+{
+
+class EventLoop;
+class Acceptor;
+class TcpConnection;
+
+// TcpServer class manage the TcpConnection obtained by accept(2).
+// It is a class that is directly used by the user. The lifecycle is controlled by the user
+class TcpServer: noncopyable
+{
+public:
+    using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
+    using OnNewConnectionCb = std::function<void(TcpConnectionPtr tcpConnPtr, int conn_fd, const SA_IN* peer_addr)>;
+    using OnMessageConnectionCb = std::function<void(const char* buf, size_t len)>;
+
+    TcpServer(EventLoop* loop, int listen_port);
+    ~TcpServer(); // force out-line dtor, for scoped_ptr members
+
+    // set new conntion callback
+    // not thread safe
+    void setNewConnectionCb(const OnNewConnectionCb& cb);
+
+    // set message callback
+    // not thread safe
+    void setMessageCb(const OnMessageConnectionCb& cb);
+
+    void start();
+
+private:
+    // Accepting new connections
+    // not thread save
+    // but in loop
+    void onNewConnection(int conn_fd, const SA_IN* peer_addr);
+    EventLoop* owner_loop_;
+    std::unique_ptr<Acceptor> acceptor_; // avoid revealing Acceptor
+
+    // identifier for each new TcpConnection
+    std::string name;
+    int totalCreatedTcpConnections_;  // in loop
+
+    // remove TcpConnection
+    // not thread safe
+    // but in loop
+    void removeConnection(TcpConnectionPtr conn);
+
+    OnNewConnectionCb onNewConnCb_;
+    OnMessageConnectionCb onMessageCb_;
+
+    // managing TcpConnections
+    std::unordered_map<std::string, TcpConnectionPtr> tcp_connections_;
+};
+
+} // namespace net
+} // namespace LanceNet
+
+#endif // LanceNet_NET_TCPSERVER_H
