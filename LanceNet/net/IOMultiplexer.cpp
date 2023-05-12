@@ -84,15 +84,21 @@ void IOMultiplexer::updateFdChannel(FdChannel* channel)
     }
 }
 
-// FIXME: complete the implementation
 void IOMultiplexer::removeFdChannel(FdChannel *sockChannel)
 {
     int fd = sockChannel->fd();
     auto iter = fdMap_.find(fd);
     assert(iter != fdMap_.end());
 
+    int index = sockChannel->index();
+    assert(index >= 0 && index < static_cast<int>(fdlist_.size()));
+    assert(fdlist_[index].fd == sockChannel->fd());
+    // delte from fdlist_ in O(1) time
+    std::swap(fdlist_[index], fdlist_.back());
+    fdMap_[fdlist_[index].fd]->index(index);
+
+    fdlist_.pop_back();
     fdMap_.erase(iter);
-    
 }
 
 void IOMultiplexer::assertInEventLoopThread()
