@@ -27,7 +27,7 @@ TcpConnection::~TcpConnection()
 
 void TcpConnection::setOnConnectionEstablishedCb(const OnNewConnectionEstablishedCb& cb)
 {
-    conn_established_cb_ = cb;
+    on_conn_established_cb_ = cb;
 }
 
 void TcpConnection::setOnMessageCb(const OnMessageCb& cb)
@@ -35,14 +35,19 @@ void TcpConnection::setOnMessageCb(const OnMessageCb& cb)
     on_message_cb_ = cb;
 }
 
-void TcpConnection::setOnDisconnectCb(const OnDisconnectCb& cb)
-{
-    disconnect_cb_ = cb;
-}
-
-void TcpConnection::setOnCloseCb(const OnCloseConnectionCb& cb)
+void TcpConnection::setOnDisconnectCb(const OnCloseConnectionCb& cb)
 {
     on_close_cb_ = cb;
+}
+
+void TcpConnection::setCloseCallback(const CloseCallback& cb)
+{
+    closeCallback_ = cb;
+}
+
+void TcpConnection::connectionEstablished()
+{
+    on_conn_established_cb_(shared_from_this(), talkChannel_->fd(), &peer_addr_);
 }
 
 void TcpConnection::handleRead()
@@ -51,11 +56,8 @@ void TcpConnection::handleRead()
     char buf[65535];
     auto nread = Read(talkChannel_->fd(), buf, sizeof(buf));
 
-    // FIXME peer closed the connection
     if(nread == 0){
-        // close
-        on_close_cb_(shared_from_this());
-        return ;
+        handleClose();
     }else if(nread > 0){
         if(on_message_cb_){
             on_message_cb_(buf, nread);
@@ -63,8 +65,26 @@ void TcpConnection::handleRead()
             LOG_WARNC << "OnMessageCb is not set";
         }
     }else{
-        //FIXME handle error
+        handleError();
     }
+}
+
+void TcpConnection::handleWrite()
+{
+}
+
+void TcpConnection::handleClose()
+{
+    owner_loop_->assertInEventLoopThread();
+    LOG_INFOC << "TcpConnection::handleClose()";
+    //FIXME disable talkChannel_
+    assert(closeCallback_); // the internally used close callback must be set
+    closeCallback_(shared_from_this());
+}
+
+void TcpConnection::handleError()
+{
+    LOG_WARNC << "TcpConnection::handleError() connection name [Fd = " << talkChannel_->fd() << "]";
 }
 
 } // namespace net

@@ -28,8 +28,8 @@ public:
     using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
     using OnNewConnectionEstablishedCb = std::function<void(TcpConnectionPtr connPtr, int conn_fd, const SA_IN* peer_addr)>;
     using OnMessageCb = std::function<void(const char* buf, size_t len)>;
-    using OnDisconnectCb = OnNewConnectionEstablishedCb;
-    using OnCloseConnectionCb = std::function<void(TcpConnectionPtr conn_ptr)>;
+    using OnCloseConnectionCb = OnNewConnectionEstablishedCb;
+    using CloseCallback = std::function<void(TcpConnectionPtr conn_ptr)>;
 
     TcpConnection(EventLoop* loop, int connfd,
             std::string name,
@@ -37,24 +37,30 @@ public:
     // FIXME outline dtor
     ~TcpConnection();
 
+    // registered user callback
+    // not thread safe
     void setOnConnectionEstablishedCb(const OnNewConnectionEstablishedCb& cb);
     void setOnMessageCb(const OnMessageCb& cb);
-    void setOnDisconnectCb(const OnDisconnectCb& cb);
+    void setOnDisconnectCb(const OnCloseConnectionCb& cb);
 
     // use internally by TcpServer or TcpClient
-    // to notify them to remove the TcpConnectionPtr they hold
-    void setOnCloseCb(const OnCloseConnectionCb& cb);
+    // usually it is bind to TcpServer::removeChannel
+    void setCloseCallback(const CloseCallback& cb);
+
+    // called by TcpServer
+    // not thread safe
+    // but in loop
+    void connectionEstablished();
 
     std::string name() { return name_ ;}
 
 private:
-    // callback is called when the data in FdChannel arrives
     // Not thread safe
     // but in loop
     void handleRead();
-    // read return 0 , so close the TcpConnection
-    // Not thread safe
-    // but in loop
+    void handleWrite();
+    void handleClose();
+    void handleError();
 
     EventLoop* owner_loop_;
     std::unique_ptr<FdChannel> talkChannel_;
@@ -63,10 +69,12 @@ private:
     // peer address info
     SA_IN peer_addr_;
 
-    OnNewConnectionEstablishedCb conn_established_cb_;
+    // user registered callbacks
+    OnNewConnectionEstablishedCb on_conn_established_cb_;
     OnMessageCb on_message_cb_;
-    OnDisconnectCb disconnect_cb_;
     OnCloseConnectionCb on_close_cb_;
+    // bind to TcpServer::removeConnection
+    CloseCallback closeCallback_;
 };
 
 } // namespace net

@@ -29,7 +29,7 @@ public:
     using OnMessageCb = std::function<void(const char* buf, size_t len)>;
 
     TcpServer(EventLoop* loop, int listen_port);
-    ~TcpServer(); // force out-line dtor, for scoped_ptr members
+    ~TcpServer(); // force out-line dtor, for unique_ptr members
 
     // set new conntion callback
     // not thread safe

@@ -53,17 +53,15 @@ void TcpServer::onNewConnection(int conn_fd, const SA_IN* peer_addr)
             conn_fd, conn_name, peer_addr);
 
     tcpConnPtr->setOnConnectionEstablishedCb(onNewConnCb_);
-    tcpConnPtr->setOnCloseCb(std::bind(&TcpServer::removeConnection, this, _1));
     tcpConnPtr->setOnMessageCb(onMessageCb_);
-
-    if(onNewConnCb_){
-        onNewConnCb_(tcpConnPtr, conn_fd, peer_addr);
-    }
-
+    tcpConnPtr->setCloseCallback(std::bind(&TcpServer::removeConnection, this, _1));
+    tcpConnPtr->connectionEstablished();
     tcp_connections_[conn_name] = tcpConnPtr;
 }
 void TcpServer::removeConnection(TcpConnectionPtr conn)
 {
+    owner_loop_->assertInEventLoopThread();
+    LOG_INFOC << "TcpServer::removeConnection [" << conn->name() << "]";
     auto nErased = tcp_connections_.erase(conn->name());
     assert(nErased != 0);
     // normally TcpConnectionPtr now is destoryed
