@@ -38,7 +38,7 @@ void TcpServer::setNewConnectionCb(const OnNewConnectionCb &cb)
     onNewConnCb_ = cb;
 }
 
-void TcpServer::setMessageCb(const OnMessageConnectionCb& cb)
+void TcpServer::setMessageCb(const OnMessageCb& cb)
 {
     onMessageCb_ = cb;
 }

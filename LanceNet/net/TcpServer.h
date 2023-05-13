@@ -26,7 +26,7 @@ class TcpServer: noncopyable
 public:
     using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
     using OnNewConnectionCb = std::function<void(TcpConnectionPtr tcpConnPtr, int conn_fd, const SA_IN* peer_addr)>;
-    using OnMessageConnectionCb = std::function<void(const char* buf, size_t len)>;
+    using OnMessageCb = std::function<void(const char* buf, size_t len)>;
 
     TcpServer(EventLoop* loop, int listen_port);
     ~TcpServer(); // force out-line dtor, for scoped_ptr members
@@ -37,7 +37,7 @@ public:
 
     // set message callback
     // not thread safe
-    void setMessageCb(const OnMessageConnectionCb& cb);
+    void setMessageCb(const OnMessageCb& cb);
 
     void start();
 
@@ -59,7 +59,7 @@ private:
     void removeConnection(TcpConnectionPtr conn);
 
     OnNewConnectionCb onNewConnCb_;
-    OnMessageConnectionCb onMessageCb_;
+    OnMessageCb onMessageCb_;
 
     // managing TcpConnections
     std::unordered_map<std::string, TcpConnectionPtr> tcp_connections_;

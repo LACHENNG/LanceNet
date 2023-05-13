@@ -15,6 +15,10 @@ add_executable(runInLoop_test runInLoop_test.cpp )
 add_executable(acceptorServer ./Acceptor_test_server.cpp )
 add_executable(acceptorClient ./Acceptor_test_client.cpp )
 
+add_executable(TcpServer ./TcpServer_test.cpp )
+add_executable(TcpClient ./TcpServer_test_client.cpp )
+
+
 target_link_libraries(buffer_test PRIVATE
     LanceNet_net
     LanceNet_base
@@ -74,12 +78,21 @@ target_link_libraries(runInLoop_test PRIVATE
     LanceNet_base
 )
 
-target_link_libraries(acceptorServer PRIVATE 
+target_link_libraries(acceptorServer PRIVATE
     LanceNet_net
     LanceNet_base
 )
 
-target_link_libraries(acceptorClient PRIVATE 
+target_link_libraries(acceptorClient PRIVATE
+    LanceNet_net
+    LanceNet_base
+)
+
+target_link_libraries(TcpServer PRIVATE
+    LanceNet_net
+    LanceNet_base
+)
+target_link_libraries(TcpClient PRIVATE
     LanceNet_net
     LanceNet_base
 )

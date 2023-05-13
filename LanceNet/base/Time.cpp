@@ -77,7 +77,6 @@ TimeStamp TimeStamp::now()
 
 TimeStamp TimeStamp::addSeconds(TimeStamp basetime, double secs)
 {
-
     auto newTimepoint = basetime.getTimePoint() + std::chrono::nanoseconds(static_cast<long>(secs*1e9));
     return TimeStamp(newTimepoint);
 }
