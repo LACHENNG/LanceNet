@@ -8,9 +8,10 @@ using namespace std;
 using namespace LanceNet;
 using namespace net;
 
-int main()
+int connect()
 {
     int conn_fd = Open_clientfd("localhost", 2345, false);
+//    int conn_fd2 = Open_clientfd("localhost", 2345, false);
 
     char buf[32];
     int n;
@@ -21,3 +22,8 @@ int main()
     return 0;
 }
 
+int main()
+{
+    connect();
+    return 0;
+}
