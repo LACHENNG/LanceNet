@@ -1,3 +1,4 @@
+#include "LanceNet/base/Time.h"
 #include <LanceNet/net/FdChannel.h>
 #include <LanceNet/net/EventLoop.h>
 #include <LanceNet/base/Logging.h>
@@ -30,22 +31,22 @@ FdChannel::~FdChannel()
     LOG_INFOC << "FdChannel[fd=" << fd_ << "]" << " unregistered and closed";
 }
 
-void FdChannel::handleEvents()
+void FdChannel::handleEvents(TimeStamp ts)
 {
     owner_loop_->assertInEventLoopThread();
     // invalid request : fd not open
     if(revents_ & kErrorEvent){
         LOG_WARNC << "FdChannel::handleAllEvents() POLLERR | POLLINVAL";
-        onErrorCb_();
+        onErrorCb_(ts);
     }
     // read event
     if(revents_ &  kReadEvent){
-        if(onReadCb_) onReadCb_();
+        if(onReadCb_) onReadCb_(ts);
     }
 
     // write event
     if(revents_ & kWriteEvent){
-        if(onWriteCb_) onWriteCb_();
+        if(onWriteCb_) onWriteCb_(ts);
     }
 }
 

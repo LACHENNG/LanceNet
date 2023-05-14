@@ -31,12 +31,6 @@ TimeStamp IOMultiplexer::poll(FdChannelList* activeChannels, int timeout)
     if(numEvents > 0)
     {
         fillActiveChannels(numEvents, activeChannels);
-        std::string str;
-        for(auto ch : *activeChannels){
-            str += std::to_string(ch->fd()) + " ";
-        }
-        // debug only 
-        //LOG_INFOC << numEvents << " events happended, fds = " << str;
     }
     else if(numEvents == 0)
     {

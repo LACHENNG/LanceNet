@@ -54,10 +54,10 @@ void EventLoop::StartLoop(){
 
         // a negative timeout means infinite timeout
         int timeout = -1;
-        multiplexer_->poll(&activeFdChannels_, timeout);
+        TimeStamp ts = multiplexer_->poll(&activeFdChannels_, timeout);
 
         for(auto FdChannelPtr : activeFdChannels_){
-            FdChannelPtr->handleEvents();
+            FdChannelPtr->handleEvents(ts);
         }
     }
 }

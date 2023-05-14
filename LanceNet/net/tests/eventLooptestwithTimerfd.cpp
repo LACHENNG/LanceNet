@@ -2,6 +2,7 @@
 
 
 #include "LanceNet/base/Thread.h"
+#include "LanceNet/base/Time.h"
 #include "LanceNet/net/EventLoop.h"
 #include "LanceNet/net/FdChannel.h"
 #include "LanceNet/base/Logging.h"
@@ -16,9 +17,9 @@ using namespace LanceNet::base;
 
 static int timerfd;
 
-void timeout()
+void timeout(TimeStamp receiveTime)
 {
-    LOG_INFOC << "TimeOut ";
+    LOG_INFOC << "TimeOut " << receiveTime.toFmtString();
 
     uint64_t __;
     read(timerfd, &__, sizeof(uint64_t));

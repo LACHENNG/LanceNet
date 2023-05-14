@@ -1,6 +1,7 @@
 // Author : Lance @ nwpu
 #ifndef LanceNet_NET_SOCK_CHANNEL_H
 #define LanceNet_NET_SOCK_CHANNEL_H
+#include "LanceNet/base/Time.h"
 #include "LanceNet/base/noncopyable.h"
 #include <functional>
 
@@ -20,13 +21,13 @@ class EventLoop;
 class FdChannel : noncopyable
 {
 public:
-    using EventCallback = std::function<void ()>;
+    using EventCallback = std::function<void (TimeStamp)>;
 
     explicit FdChannel(EventLoop* loop, int fd);
     ~FdChannel();
 
     // invoke user callbacks
-    void handleEvents();
+    void handleEvents(TimeStamp ts);
 
     void setReadCallback(EventCallback cb);
     void setWriteCallback(EventCallback cb);

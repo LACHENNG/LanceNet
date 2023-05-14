@@ -1,6 +1,7 @@
 
 
 
+#include "LanceNet/base/Time.h"
 #include "LanceNet/net/EventLoop.h"
 #include "LanceNet/net/FdChannel.h"
 #include "LanceNet/base/Logging.h"
@@ -14,9 +15,9 @@ using namespace LanceNet::net;
 
 static int timerfd;
 
-void timeout()
+void timeout(TimeStamp reveiveTime)
 {
-    LOG_INFOC << "TimeOut ";
+    LOG_INFOC << "TimeOut " << reveiveTime.toFmtString();
 
     uint64_t __;
     read(timerfd, &__, sizeof(uint64_t));
