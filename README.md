@@ -1,190 +1,190 @@
-# LanceNet: A web library From Scratch
+# LanceNet： 一个基于Reactor模式的高性能网络库
 
+**代码统计**
 
-1. concurrent echo server with Select IO multiplexing
- 
-   a. the main thread  select on read_set to monitor any possible readable events of sockets fds, if listen socket is readalbe, accepts new connection and update read_set. and inform one of the thread in thread pool to do the `echo` job
-   the difficulty is how to monitor the events of close when peer close the connect, Which thread updates readsets and closes fd? Because here are serveral race conditions that may occur:
-   1) if the peer close the connection,  or a file descriptor being monitored by select()  is  closed  in  another
-       thread,  the  result  is  unspecified.   On  some  UNIX systems, select()
-       unblocks and returns, with an indication  that  the  file  descriptor  is
-       ready  (a subsequent I/O operation will likely fail with an error  
-      
+<img src="images/codecloc.png" alt="codecloc" style="zoom: 50%;" />
 
-# 遇到的问题
- 当慢速发送少量数据时，服务器和客户端收发数据正常，当客户端高速向服务器发生大量数据，而接收端每次只读取一个消息（少量）数据，运行一会出现运行变慢甚至阻塞。深入分析原因， `send`, `recv`, `read`, `write` socket其实并不是直接网络发送数据，而是将数据从**应用层缓冲区**拷贝到**内核缓冲区**，一端高速发，另一端低速接收，最终导致接收端内核缓冲区满, 假如我们现在是在使用TCP，由于TCP拥塞控制机制的存在，此时发送方的send_win会慢慢减小
+​	本网络库旨在使用现代c++从零开始构建一个高性能的网络库，用作编程练习，将计算机网络，现代c++编程，软件工程等知识进行一次实际的项目转化，为了防止闭门造车，脱离主流的开发环境和思想，本项目的设计参考了陈硕的 《Linux多线程服务端编程》《CSAPP》《Effective Modern C++》等书籍，学习了很多实用和现代C++知识和设计思想
+
+​	  简单来说，本项目是基于muduo重新实现的一个版本，大部分代码均进行了重写，精简或改进 （鉴于个人的水平有限，改写的过程可能会丢掉一些muduo的一些feature和少许性能）
+
+1. **Buffer类**
+
+   [简化] 精简了Muduo中使用readv(2)结合栈空间减少初始化buffer空间时大小的占用，**LancNet采用简化的设计**，直接使用底层vector<char\>  开辟一个小的存储空间，让底层容器自动进行内存按需增长。
+
+   [改进] 为了有效避免一开始就给每个buffer分配大内存，而是需要的时候，向Buffer末尾添加数据，让底层容器自动管理内存增长， 同时使用**scatter input(readv(2))** 结合栈空间的方式，一次读入足够多的数据，减少系统调用
+
    
-   不同的程序进行网络通信时，发送的一方会将内核缓冲区的数据通过网络传输给接收方的内核缓冲区。在应用程序 A 与 应用程序 B 建立了 TCP 连接之后，假设应用程序 A 不断调用 send 函数，这样数据会不断拷贝至对应的内核缓冲区中，如果 B 那一端一直不调用 recv 函数，那么 B 的内核缓冲区被填满以后，A 的内核缓冲区也会被填满，此时 A 继续调用 send 函数会是什么结果呢？ 具体的结果取决于该 socket 是否是阻塞模式。我们这里先给出结论：
 
-1. 当 socket 是阻塞模式的，继续调用 send/recv 函数会导致程序阻塞在 send/recv 调用处。
-2. 当 socket 是非阻塞模式，继续调用 send/recv 函数，send/recv 函数不会阻塞程序执行流，而是会立即出错返回，我们会得到一个相关的错误码，Linux 平台上该错误码为 `EWOULDBLOCK` 或 `EAGAIN`（这两个错误码值相同），Windows 平台上错误码为 WSAEWOULDBLOCK。
+2. **LogStream类**: 兼顾了流式输出的优点(类型安全) 和 类似于printf方便的格式化
 
+   [改进] 引入了了适用领域最新的**整型和浮点型数据转字符串**算法，比snprintf快数倍
 
-另外，  细心的读者如果实际去做一下这个实验会发现一个现象，即当 tcpdump 已经显示对端的 TCP 窗口是 0 时， blocking_client 仍然可以继续发送一段时间的数据，此时的数据已经不是在发往对端，而是逐渐填满到本端的内核发送缓冲区中去了，这也验证了 send 函数实际上是往内核缓冲区中拷贝数据这一行为 
+   [改进 TODO] 支持类似于printf那样的格式化
 
-【解决方法】 提高客户端和用户端接受数据的大小，我们每次接收大量数据，到用户缓冲区，以便能快速消耗内核缓冲数据防止缓冲区满 
-例如:
-char userBuf[400*1024]; // 400 kb user buffer 
-int nLen = (int) recv(sock, userBuf, 400*1024, 0); 
+3. **TimerQueue类**
 
-但这会引入另一个问题， 即`少包`，`粘包`问题，少包问题是我们期望接受n个字节，却只收到少于n个字节，这时候我们要等待并读取更多数据，进行**组包**；粘包是指接受的字节数大于一个message的字节数，也就是数据包含了多个message对象的数据, 我们需要把这些包一个个**拆出来**
+   - **muduo库的方案**：为了**快速得到当前已经过时的计时器**和正确处理**同一时间多个计时器到期**的情况，muduo采用`set<pair<TimeStamp, Timer*>> ` 来管理计时器，并使用裸指针，存在泄露风险，若在原来设计上采用set<pair<TimeStamp, unique\<Timer\>>>进行改进，需要涉及C++14 [异构查找](https://www.cppstories.com/2019/05/heterogeneous-lookup-cpp14/)，同时对于set存储设计unique_ptr等只能移动的类型，C++17引入的set::[extract]([std::set::extract - cppreference.com](https://en.cppreference.com/w/cpp/container/set/extract))是唯一能将move-only object移除set的方式，这会大大引入没必要的实现复杂度。
 
-性能优化问题：
-1. select 第一个参数表示了遍历的空间大小，我们如何高效的记录maxfd？
-   1. 传统的方法采用维护maxfd，每次对新加入的fd取max，维护一个全局的可用maxfd，但这种方法只会使得maxfd越来越大，最终导致select底层的线性遍历空间越来越大
+   - **我的方案**：采用小顶堆对Timer进行管理， priority_queue存储pair类型pair<TimeStamp, vector<unique\<Timer\> > >, 简单使用TimeStamp即可查找过期的Timer，避免涉及C++14和17,
 
+     为了正确处理移动语义，使用boost来执行成员函数绑定 boost::bind(&TimerQueue::_addTimer, this, std::move(timer)), 来得到一个std::function<void\>
 
-遇到的问题：
-   如何处理客户端退出事件？简单的采取消息队列的方式让工作线程向`退出消息队列`添加消息，让主线程读取退出消息队列并对fd_set等相关状态更新，但这不是一件容易的任务，极易导致竞争，可能的就有两种：
-   1. 消费者worker线程1检测到了客户端退出消息，将该消息加入`退出消息队列`并采用event_fd通知以便下次被select检测到,但就在通知之前，cpu时间片切换到select线程，此时end-of-file同样再次触发reabable事件，此时交由work线程2处理，对同一个fd重复加入'退出消息队列',容易导致select线程重复记数退出客户的数量，并且无法区分这个退出消息是重复的，还是由于文件描述符复用的新连接关闭关闭产生的消息，还是该首次退出的消息。导致处理混乱，`解决方案`: 简单的fd数值无法区分新旧连接的退出消息，我们将fd包装成一个客户端clientfd类，用clientfd*指针进行消息传递，这样每个客户连接都会不同，不会因为fd的数值相同而产生重复操作的风险
+     ```c++
+     boost::bind(&TimerQueue::_addTimer, this, std::move(timer))
+     ```
 
+     
 
-## 编译问题
-1. 循环引用
-```c++
-   // A.h
-   class B; // forward declaration
+     
 
-   class A {
-   public:
-      void foo(B& b);
-   };
-
-   // B.h
-   class A; // forward declaration
-
-   class B {
-   public:
-      void bar(A& a);
-   };
-
-   // A.cpp
-   #include "A.h"
-   #include "B.h"
-
-   void A::foo(B& b) {
-      b.bar(*this);
-   }
-
-   // B.cpp
-   #include "A.h"
-   #include "B.h"
-
-   void B::bar(A& a) {
-      a.foo(*this);
-   }
-```
-
-
-## 技术总结
-Unique/Shared ptr它们的区别在于：
-
-- unique_ptr是独享被管理对象指针所有权的智能指针，不能被复制或赋值14。它适合用于表示一些独一无二的资源，如文件句柄、互斥锁等5。
-- shared_ptr是共享被管理对象指针所有权的智能指针，可以被复制或赋值24。它采用引用计数技术来记录有多少个shared_ptr指向同一个对象34。当引用计数变为0时，才会释放对象内存24。它适合用于表示一些可以被多个对象共享的资源，如链表节点、树节点等5。
-   
-在面向对象编程中，shared_ptr和unique_ptr常见的用法有：
-
-- 作为类成员变量，表示类与其他类之间的关联关系。例如，如果一个类A包含一个unique_ptr<B>类型的成员变量，则表示A拥有B，并且B不能被其他类拥有；如果一个类A包含一个shared_ptr<B>类型的成员变量，则表示A与其他可能拥有B的类共享B。
-- 作为函数参数或返回值，表示函数对传入或返回的对象指针的所有权控制。例如，如果一个函数f接受一个unique_ptr<T>类型的参数，则表示f会获取T对象的所有权，并且调用者不能再使用该T对象；如果一个函数f返回一个shared_ptr<T>类型的值，则表示f会创建或共享一个T对象，并且调用者可以继续使用该T对象。
-
-
-## 问题：如何检测客户端退出
-网络编程中，检测socket对应的客户端退出有两种情况：正常退出和异常退出¹。
-
-- 正常退出是指客户端主动关闭连接，发送一个FIN包给服务器。这时，服务器端的socket会收到一个0字节的数据包¹²。因此，服务器可以通过读取socket的返回值来判断是否为0，如果是0，则表示客户端已经正常退出¹²。例如：
-
-int n = read(socket_fd, buffer, size); // 读取socket数据
-if (n == 0) {
-  // 客户端已经正常退出
-}
-
-- 异常退出是指客户端由于网络故障或其他原因断开连接，没有发送FIN包给服务器。这时，服务器端的socket无法通过读取数据来检测客户端的状态¹。因此，服务器需要通过写入socket来判断是否出现错误¹³。如果写入失败，并且错误码为EPIPE或ECONNRESET，则表示客户端已经异常退出¹³。例如：
-```c++
-int n = write(socket_fd, buffer, size); // 写入socket数据
-if (n == -1 && (errno == EPIPE || errno == ECONNRESET)) {
-  // 客户端已经异常退出
-}
-```
+​	 说明：本项目的类名设计多数来自于muduo，一些类的接口设计也参考了muduo，但几乎所有的代码都在源代码的基础上进行了**简化和重新实现**，少许的第三方代码，例如Google 的 StringPiece等直接拷贝的源文件。
 
 
 
-# 内存管理
-   减少内存碎片的产生，让程序长期稳定运行
+# Designs ✨
 
-1. 内存池
-   - 从内存申请足够大小的内存让程序自己管理
-2. 对象池
-   -  一次创建足够多的对象，减少频繁创建过程的消耗
-3. 智能指针
-   - 保证被创建的对象正确的释放
-   
-1.内存池的必要性
+## 0. 基础库
 
-  1. 减少频繁陷入系统调用，减少产生的内存碎片和提高运行效率
-  2. 精细控制new/delete, 方便内存管理
- 
- **技术**
-   1. 重载operator new 和 operator delete 
-   2. 在重载版本的版本使用自己的内存管理类
-   3. 管理多个不同大小的内存单元（为什么要多个？） 
-   ```c++
-   MemoryMgr::instance().alloc(nSize);
-   MemoryMgr::instance().free(nSize);
-   ```
-![image](images/MemoryPool.png)
+基础库主要是对posix系列的函数进行封装，主要包括
+
+1. 对pthread的封装
+1. 对条件变量的封装
+1. 对锁的封装
+1. 对常见unix系统调用的封装
+1. 日志库
+1. 线程池
+1. 高层同步设施：阻塞队列和倒计时（CountDownLatch）
+1. 底层同步设施：条件变量的封装
 
 
-### 多线程异步日志库
 
-**日志格式**：20990101 12:10:01.123456 hello - File.cpp:21
+### 0.1 多线程异步日志库
+
+**日志格式**：[LOG_LEVEL] 20990101 12:10:01.123456 Message - Example.cpp:100
 
 **特点：**
 
-1. 时间戳，使用了标准库std::chrono库，精度能达到纳秒级别
+1. 时间戳，基于**标准库std::chrono库**，精度能达到纳秒级别
 
 2. 更改了默认的 整数浮点数转字符串的算法
 
+   使用 两种高性能的算法，提升了**整型和浮点型数值转字符串**的速度
+
    具体： snprintf 替換成領域最新的算法，速度快数倍
 
-3. 高精度的时间间隔计算，最高精确到纳秒($1e^{-9}s$), 时间戳精确到微秒（够用）
+3. 高精度的时间间隔计算，最高精确到纳秒($1e^{-9}s$), 时间戳采用了微秒，原因是这个精度一般够用了
 
 4. 避免使用time_t，防止在2038年发生溢出
 
+5. 使用GCC内置的 __builtin_strrchr 在**编译期**即可获得文件名的basename
+
+   ```c++
+   #define BASENAME(FILE) (__builtin_strrchr(FILE, '/') ? __builtin_strrchr(FILE, '/') + 1 : FILE)
+   ```
+
+   
+
+6. 支持控制台**彩色**字体输出
+
+<img src="images/colorText.png" style="zoom:50%;" />
 
 
-##### **TCP 网络编程本质**
+
+### 0.2 Buffer设计和使用
+
+​	非阻塞网络编程中，如何设计并使用缓冲区？一方面希望减少系统调用次数，另一方面我们想节约内存，例如10k连接每个链接个分配一个读写缓冲区，将消耗1GB内存，但多数情况下这些缓冲区利用率是很低的。
+
+【基本】采用readv(2)解决了这个问题：在栈上临时开辟一个空间，使用readv往buffer和这个空间填充，若数据量小，没有超过Buffer的writable字节数，直接读到Buffer中，否则读到这个临时空间，然后append到Buffer里面，避免每个连接的初始化Buffer多大造成内存浪费
+
+【优化】进一步的，分类防止stack空间紧张，采用thread local的extrabuf进一步优化空间使用（但不能全局共享一个）
+
+
+
+## 1. 网络库
+
+这是整个网络库的核心实现
+
+【待完善】
+
+
+
+
+
+## **TCP 网络编程本质**
 
 - 处理三个半事件
 
 其中有很多细节和难点需要思考：
 
 1. 如何主动关闭连接，保证对方收到全部数据？ 特别是有应用层缓冲区的情况
+
 2. 应用层接受缓冲区和发生缓冲区的必要性？
+
 3. 缓冲区设置多大？ 如果每个连接分配一个读写缓冲区，但大多数时候缓冲区利用率很低，造成浪费，如何解决？
+
 4. 接收方和发送方处理速度不一致，会不会导致数据堆积在发送方导致内存暴涨？
 
+   
+
+## 网络并发服务程序设计方案
+
+1. process-per-connnection,传统的unix编程方案，使用fork，每一个连接开一个进程
+2. thread-per-connection，传统的java网络编程方案，线程过多对操作系统的scheduler一个大负担。
+3. Io multiplexing（select 、pool、epool） ，几乎肯定要使用 non-blocking IO，而使用非阻塞IO肯定要使用应用层buffer（难度最大）。
+
+
+
+主要讲一下第三种，这一种本质是 （event-driven**事件驱动**）编程模型，大佬Doug Schmidt已经为我们总结好了一套范式，**Reactor**，让我们有章可循。这些通用的Reactor库包括 `libevent(c)`、`Netty(java)`、`twisted(python)`等。
+
+
+
+**Reactor模式的主要思想**：网络编程中有很多是事务性（routine）的工作，可以提取为公用的框架或库，用户只需要填上关键的业务逻辑代码，并将回调注册到框架中，就可以实现完整的网络服务，这就是Reactor模式的主要思想。它的意义在于将消息（IO事件）分发到用户提供的处理函数，<u>并保持网络部分的通用代码不变</u>，独立于用户的业务逻辑。<u>Reactor最核心的事件分发机制，即将IO multiplex拿到的IO事件分发给各个文件描述符(fd)的事件处理函数</u>。
+
+
+
+**本项目采用的Reactor模型**
+
+首先看看一个普通的Reactor模型，全部的IO工作都在一个Reactor线程完成，计算任务交给thread pool，。如果计算任务彼此独立，且IO压力不大，这种方案是非常实用的，比如用来做求解数独的服务器（sudoku solver）。
+
+
+
+本项目采用加强版，将<u>连接分散到多个Reactor线程</u>（Reactor线程也就是IO线程）：
+
+1. 一个**主Reactor**，用于负责accept(2)链接，然后把连接挂载某个**子Reactor**中 （采用round-robin）
+2. 将该连接的所有操作交给子Reactor处理，每个子Reactor将计算任务交给线程池计算，或者小规模任务直接在当前IO线程完成并直接返回结果，减少响应延迟
+
+可见这种模型具有更强的适应性，这种结构的时序图如下：
+
+<img src="images/mutli-threadNetArch.png" style="zoom: 33%;" />
+
+
+
+如何选取Reactor的数量？一般来说按照**每千兆比特每秒**的吞吐量配一个event loop比较合适，并且同一个IO线程下的事件没有优先级，这是为了防止优先级反转的发生，如果你要处理心跳连接，并且认为优先级较高，那个应该用单独的IO线程管理，这样就防止了数据连接上的事件阻塞了心跳事件。
 
 
 
 
 
+**总结**
+
+本模型采用的编程模式为：one loop per thread + thread pool
+
+- event loop(Reactor线程) 用作non-blocking IO和定时器
+- thread pool 用来做计算，具体可以是任务队列和生产消费者队列
 
 
 
-### 学习建议
-
-这是我在学习陈硕的muduo库，并尝试边看书边自己动手实现一个类似的网络库，在动手实践的过程中，我学习到很多实用的知识，也对以前看到的一些知识点有了更深刻的理解，同时对学习方式有了新的领悟，动手实践是一种很好的方式，可以让你深入理解网络库的原理和实现，并提高你的编程能力和项目经验。不过，我也有一些建议，希望对你有帮助：
-
-- 在学习开源库的时候，不要只关注代码，也要注意阅读陈硕的博客和书籍中的相关文章，了解他的设计思想，编程风格，遇到的问题和解决方案等。这样可以让你更好地理解他的代码，并学习他的优秀经验。
-
-- 在自己实现网络库的时候，不要只是照搬开源库的代码，也要尝试自己思考和创新，比如使用不同的数据结构，算法，模式，工具等。这样可以让你锻炼你的编程思维和创造力，并发现自己的优势和不足。
-
-- 在完成自己的网络库后，不要就此满足，也要尝试使用你的网络库来开发一些实际的应用，比如聊天室，代理服务器，Web框架等。这样可以让你检验你的网络库的功能和性能，并发现一些潜在的问题和改进点。
-
-- 在编程实践的时候，也要复习一些基础知识和常见问题，比如操作系统，计算机网络，数据结构与算法，设计模式等。这样你的水平会在从课本--实践的相互迭代中快速成长。
-
-  
-
-  最后，多阅读经典书籍，站在巨人的肩膀上，通过实践将在知识转化成自己的才是最重要的，纸**上得来终觉浅，绝知此事要躬行**！
 
 
+**服务端连接关闭**
+
+将主动关闭连接分成两步骤来做，先关闭本地“写”端`shutdown(sock, SHUT_WR)`，防止还有数据在路上漏读，等对方关闭之后，在关本地“读”端。此过程底层通常为，服务端发完了数据，于是shutdown write，发送TCP FIN分节，对方会读到0字节，然后都放通常关闭连接，这样网络库会读到0字节，然后关闭连接（**真正调用close(fd)**)。
+
+
+
+**为什么需要应用层缓冲区？**
+
+用户态使用**接受缓冲区**的原因：主要原因是即便发送方一个字节一个字节的发送数据，接收端代码也能正常工作
+
+发送方使用**发送缓冲区**的原因：防止系统的TCP换成不够导致IO线程阻塞影响性能

@@ -128,10 +128,10 @@ compile_commands.json
 CTestTestfile.cmake
 
 # images 
-images/
-*.png
-*.jpeg
-*.jpg
+# images/
+# *.png
+# *.jpeg
+# *.jpg
 
 # clangd lsp server for vim language server support 
 .clangd/
