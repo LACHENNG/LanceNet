@@ -13,6 +13,12 @@ namespace LanceNet
 
 namespace net
 {
+
+constexpr const int kextra_buf_len = 65535;
+
+// thread local buffer to optimize Buffer::readFd()
+extern __thread char tl_extra_buf[kextra_buf_len];
+
 // reference: Muduo Buffer
 // init size kDefaultPrependSize + kDefaultInitSize
 // implemented based on vector<char> which indicates that the capacity can automatically adjust to user`s needs
@@ -62,6 +68,10 @@ public:
     int16_t readInt16();
     int32_t readInt32();
     int64_t readInt64();
+
+    // read data from socket
+    // optimized by "scatter input"
+    ssize_t readFd(int fd);
 
     void append(const void* data, size_t len);
     void append(const char* data, size_t len);

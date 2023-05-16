@@ -1,4 +1,6 @@
 #include <LanceNet/net/Buffer.h>
+#include <LanceNet/base/Logging.h>
+#include <LanceNet/base/unix_wrappers.h>
 #include <bits/stdint-intn.h>
 #include <cstring>
 #include <memory.h>
@@ -13,6 +15,8 @@ namespace net
 const int Buffer::kDefaultInitSize;
 // default pre-appendable size
 const int Buffer::kDefaultPrependSize;
+
+__thread char tl_extra_buf[kextra_buf_len];
 
 Buffer::Buffer(int initSz, int prependSz)
   : buf_(initSz + prependSz),
@@ -171,7 +175,35 @@ int64_t Buffer::readInt64()
     return *rv;
 }
 
+// read data from fd to internal buffer
+ssize_t Buffer::readFd(int fd)
+{
+    std::vector<struct iovec> iovs(2, {nullptr, 0});
+    struct iovec iov1, iov2;
 
+    iov1.iov_base = beginWrite();
+    iov1.iov_len = writeableBytes();
+    iov2.iov_base = tl_extra_buf;
+    iov2.iov_len = kextra_buf_len;
+
+    iovs[0] = iov1;
+    iovs[1] = iov2;
+
+    auto nBytesRead = Readv(fd, iovs.data(), iovs.size());
+    // if no data read into extra buffer
+    if(nBytesRead <= static_cast<ssize_t>(iov1.iov_len))
+    {
+        hasWritten(nBytesRead);
+    }
+    else // has data read into extra buffer
+    {
+        int n = nBytesRead - iov1.iov_len;
+        assert(n > 0 && n < static_cast<ssize_t>(iov2.iov_len));
+        append(iov2.iov_base, n);
+    }
+    return nBytesRead;
+    //readv(, const struct iovec *iov, int iovcnt);
+}
 ////////////////////////////////////////////////////////
 // append
 ////////////////////////////////////////////////////////
