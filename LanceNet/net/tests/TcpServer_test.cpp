@@ -1,4 +1,5 @@
 #include <LanceNet/net/FdChannel.h>
+#include "LanceNet/base/Time.h"
 #include "LanceNet/net/EventLoop.h"
 #include "LanceNet/net/TcpConnection.h"
 #include <LanceNet/net/TcpServer.h>
@@ -8,12 +9,17 @@
 using namespace LanceNet;
 using namespace net;
 
+std::atomic_int32_t totalBytesReceived{0};
+
 EventLoop loop;
 
-
-void OnMessage(const char* buf, size_t len)
+using TcpConnectionPtr = TcpConnection::TcpConnectionPtr;
+void OnMessage(const TcpConnectionPtr& conn, Buffer* buf, TimeStamp receiveTime)
 {
-    LOG_INFOC << "Server Received Message : " << buf;
+    totalBytesReceived += buf->readableBytes();
+    LOG_INFOC << "Server Received Message : " << buf->retrieveAllAsString();
+
+    LOG_INFOC << "total received bytes: " << totalBytesReceived; 
 }
 
 void OnConnectionEstablished(TcpConnection::TcpConnectionPtr connPtr, int conn_fd, const SA_IN* peer)
@@ -23,7 +29,6 @@ void OnConnectionEstablished(TcpConnection::TcpConnectionPtr connPtr, int conn_f
    getnameinfo((SA*)peer, sizeof(SA), name, sizeof(name), port, sizeof(port),  NI_NUMERICHOST | NI_NUMERICHOST);
 
    LOG_INFOC << "Server got connection name = " << name << " port = " << port;
-
 }
 
 int main()
