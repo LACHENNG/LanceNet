@@ -74,25 +74,44 @@ void IOMultiplexer::updateFdChannel(FdChannel* channel)
         int index = channel->index();
         assert(index >= 0);
         assert(index < static_cast<int>(fdlist_.size()));
+        assert(fdlist_[index].fd == channel->fd());
         fdlist_[index].events = channel->events();
     }
 }
 
 void IOMultiplexer::removeFdChannel(FdChannel *sockChannel)
 {
+    assertInEventLoopThread();
     int fd = sockChannel->fd();
     auto iter = fdMap_.find(fd);
     assert(iter != fdMap_.end());
+    assert(fdMap_[fd] == sockChannel);
 
     int index = sockChannel->index();
     assert(index >= 0 && index < static_cast<int>(fdlist_.size()));
-    assert(fdlist_[index].fd == sockChannel->fd());
+
+    assert(fdlist_[index].fd == -sockChannel->fd()-1);
     // delte from fdlist_ in O(1) time
+    int backFd = fdlist_.back().fd;
+    if(backFd < 0)
+    { 
+        backFd = -backFd - 1;
+    }
     std::swap(fdlist_[index], fdlist_.back());
-    fdMap_[fdlist_[index].fd]->index(index);
+    fdMap_[backFd]->index(index);
 
     fdlist_.pop_back();
     fdMap_.erase(iter);
+}
+
+void IOMultiplexer::disableAllEvent(FdChannel *targetChannel)
+{
+    int index = targetChannel->index();
+    assert(targetChannel->isNoneEvent());
+    assert(index >= 0 && index < static_cast<int>(fdlist_.size()));
+    assert(fdlist_[index].fd != -targetChannel->fd() - 1);
+    fdlist_[index].fd = -targetChannel->fd() - 1;
+    assert(fdlist_[index].fd < 0);
 }
 
 void IOMultiplexer::assertInEventLoopThread()

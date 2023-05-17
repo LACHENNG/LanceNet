@@ -3,6 +3,7 @@
 #include <LanceNet/net/EventLoop.h>
 #include <LanceNet/base/Logging.h>
 #include <LanceNet/base/unix_wrappers.h>
+#include <assert.h>
 #include <sys/poll.h>
 
 namespace LanceNet
@@ -13,9 +14,11 @@ namespace net
 const short FdChannel::kReadEvent = POLLIN | POLLPRI | POLLRDHUP;
 const short FdChannel::kWriteEvent = POLLOUT;
 const short FdChannel::kErrorEvent = POLLERR | POLLNVAL;
+const short FdChannel::kNoneEvent = 0;
 
 FdChannel::FdChannel(EventLoop* loop, int fd)
-  : fd_(fd),
+  : eventHandling(false),
+    fd_(fd),
     index_(-1),
     events_(0),
     revents_(0),
@@ -26,18 +29,19 @@ FdChannel::FdChannel(EventLoop* loop, int fd)
 // unregister channel in ower_looper
 FdChannel::~FdChannel()
 {
-    owner_loop_->remove(this);
+    assert(!eventHandling);
+    // owner_loop_->remove(this);
     Close(fd_);
     LOG_INFOC << "FdChannel[fd=" << fd_ << "]" << " unregistered and closed";
 }
 
 void FdChannel::handleEvents(TimeStamp ts)
 {
+    eventHandling = true;
     owner_loop_->assertInEventLoopThread();
     // invalid request : fd not open
     if(revents_ & kErrorEvent){
-        LOG_WARNC << "FdChannel::handleAllEvents() POLLERR | POLLINVAL";
-        onErrorCb_(ts);
+        if(onErrorCb_) onErrorCb_(ts);
     }
     // read event
     if(revents_ &  kReadEvent){
@@ -48,17 +52,48 @@ void FdChannel::handleEvents(TimeStamp ts)
     if(revents_ & kWriteEvent){
         if(onWriteCb_) onWriteCb_(ts);
     }
+    eventHandling = false;
 }
 
 void FdChannel::enableReading()
 {
-    LOG_INFOC << "registered reading event for fd = " << fd();
+    LOG_INFOC << "enable reading for fd = " << fd();
     registInterestedEvent(kReadEvent);
+}
+
+void FdChannel::enableWriting()
+{
+    LOG_INFOC << "enable writing for fd = " << fd();
+    registInterestedEvent(kWriteEvent);
+}
+
+void FdChannel::disableWriting()
+{
+    LOG_INFOC << "disable writing for fd = " << fd();
+    unregisterEvent(kWriteEvent);
+}
+
+void FdChannel::disableAll()
+{
+    // WRONG: only set event = 0 can not mask all event like POLLERR
+    events_ = 0;
+    owner_loop_->disableAllEvent(this);
+}
+
+bool FdChannel::isNoneEvent()
+{
+    return events_ == kNoneEvent;
 }
 
 void FdChannel::registInterestedEvent(short event)
 {
     events_ |= event;
+    this->update();
+}
+
+void FdChannel::unregisterEvent(short event)
+{
+    events_ &= (~event);
     this->update();
 }
 

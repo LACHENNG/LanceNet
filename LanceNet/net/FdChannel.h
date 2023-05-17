@@ -46,10 +46,16 @@ public:
     // let the interested events take effect.
     // (change interested events)
     void enableReading();
+    void enableWriting();
+    void disableWriting();
+    void disableAll();
+    
+    bool isNoneEvent();
 
 private:
     // change interested events in fd
     void registInterestedEvent(short event);
+    void unregisterEvent(short event);
 
     // interact with EventLoop, let the fd event take effect
     void update();
@@ -59,7 +65,8 @@ private:
     static const short kWriteEvent;
     static const short kNoneEvent;
     static const short kErrorEvent;
-
+    // assert that Channel is not deconstruct during handing events
+    bool eventHandling;
     const int fd_;
     // record index in poolfd in IOMultiplexer class
     int index_;

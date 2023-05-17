@@ -16,8 +16,10 @@ TcpConnection::TcpConnection(EventLoop* loop, int connfd, std::string name, cons
     name_(name),
     peer_addr_(*peer_addr)
 {
-    talkChannel_->setReadCallback(std::bind(&TcpConnection::handleRead, this));
+    talkChannel_->setReadCallback(std::bind(&TcpConnection::handleRead, this, std::placeholders::_1));
+    talkChannel_->setWriteCallback(std::bind(&TcpConnection::handleWrite, this, std::placeholders::_1));
     talkChannel_->enableReading();
+    // talkChannel_->enableWriting();
 }
 
 TcpConnection::~TcpConnection()
@@ -50,17 +52,16 @@ void TcpConnection::connectionEstablished()
     on_conn_established_cb_(shared_from_this(), talkChannel_->fd(), &peer_addr_);
 }
 
-void TcpConnection::handleRead()
+void TcpConnection::handleRead(TimeStamp ts)
 {
     owner_loop_->assertInEventLoopThread();
-    char buf[65535];
-    auto nread = Read(talkChannel_->fd(), buf, sizeof(buf));
 
+    int nread = inputBuffer_.readFd(talkChannel_->fd());
     if(nread == 0){
         handleClose();
     }else if(nread > 0){
         if(on_message_cb_){
-            on_message_cb_(buf, nread);
+            on_message_cb_(shared_from_this(), &inputBuffer_, ts);
         }else{
             LOG_WARNC << "OnMessageCb is not set";
         }
@@ -69,22 +70,28 @@ void TcpConnection::handleRead()
     }
 }
 
-void TcpConnection::handleWrite()
+void TcpConnection::destoryedConnection(TcpConnectionPtr conn)
 {
+    owner_loop_->remove(conn->talkChannel_.get());
+}
+
+void TcpConnection::handleWrite(TimeStamp ts)
+{
+
 }
 
 void TcpConnection::handleClose()
 {
     owner_loop_->assertInEventLoopThread();
     LOG_INFOC << "TcpConnection::handleClose()";
-    //FIXME disable talkChannel_
-    assert(closeCallback_); // the internally used close callback must be set
+    talkChannel_->disableAll();
+    assert(closeCallback_);
     closeCallback_(shared_from_this());
 }
 
 void TcpConnection::handleError()
 {
-    LOG_WARNC << "TcpConnection::handleError() connection name [Fd = " << talkChannel_->fd() << "]";
+    LOG_WARNC << "TcpConnection::handleError() connection name [Fd = " << talkChannel_->fd() << "]" << strerror(errno);
 }
 
 } // namespace net

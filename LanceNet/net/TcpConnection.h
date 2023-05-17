@@ -4,6 +4,7 @@
 
 #include "LanceNet/base/noncopyable.h"
 #include "LanceNet/base/unix_wrappers.h"
+#include "LanceNet/net/Buffer.h"
 #include "LanceNet/net/TcpServer.h"
 
 #include <functional>
@@ -27,14 +28,14 @@ class TcpConnection: public noncopyable,
 public:
     using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
     using OnNewConnectionEstablishedCb = std::function<void(TcpConnectionPtr connPtr, int conn_fd, const SA_IN* peer_addr)>;
-    using OnMessageCb = std::function<void(const char* buf, size_t len)>;
+    using OnMessageCb = std::function<void(const TcpConnectionPtr&, Buffer* buf, TimeStamp ts)>;
+
     using OnCloseConnectionCb = OnNewConnectionEstablishedCb;
     using CloseCallback = std::function<void(TcpConnectionPtr conn_ptr)>;
 
     TcpConnection(EventLoop* loop, int connfd,
             std::string name,
             const SA_IN* peer_addr);
-    // FIXME outline dtor
     ~TcpConnection();
 
     // registered user callback
@@ -52,13 +53,16 @@ public:
     // but in loop
     void connectionEstablished();
 
+    // runInRoop
+    void destoryedConnection(TcpConnectionPtr conn);
     std::string name() { return name_ ;}
 
 private:
     // Not thread safe
     // but in loop
-    void handleRead();
-    void handleWrite();
+    void handleRead(TimeStamp ts);
+    void handleWrite(TimeStamp ts);
+
     void handleClose();
     void handleError();
 
@@ -75,6 +79,10 @@ private:
     OnCloseConnectionCb on_close_cb_;
     // bind to TcpServer::removeConnection
     CloseCallback closeCallback_;
+
+    // read,write buffer
+    Buffer inputBuffer_;
+    Buffer outputBuffer_;
 };
 
 } // namespace net

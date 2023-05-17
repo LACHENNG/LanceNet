@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/timerfd.h>
+#include <sys/uio.h>
 #include <unistd.h>
 // bzero
 #include <string.h>
@@ -46,6 +47,7 @@ char* itoa_s(int num);
 ssize_t Read(int fd, void *buf, size_t count);
 ssize_t Write(int fd, const void *buf, size_t count);
 
+ssize_t Readv(int __fd, const struct iovec *__iovec, int __count);
 /* sockets interface wrappers*/
 int Socket(int domain, int type, int protocol);
 void Bind(int sockfd, const SA* addr, socklen_t addrlen);

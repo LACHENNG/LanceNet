@@ -102,6 +102,10 @@ void EventLoop::remove(FdChannel* sockChannel)
     multiplexer_->removeFdChannel(sockChannel);
 }
 
+void EventLoop::disableAllEvent(FdChannel *fdChannel)
+{
+    multiplexer_->disableAllEvent(fdChannel);
+}
 void EventLoop::quit()
 {
     running_ = false;
@@ -114,9 +118,13 @@ void EventLoop::runInLoop(PendFunction functor)
         functor();
     }
     else{
-        //if(!running_) LOG_WARNC << "the EventLoop is not started yet";
-        runInLoopImpl_->pend(functor);
+        pendInLoop(functor);
     }
+}
+
+void EventLoop::pendInLoop(PendFunction functor)
+{
+    runInLoopImpl_->pend(functor);
 }
 
 TimerId EventLoop::runAt(TimeStamp when, Callback what, double delaySecs)

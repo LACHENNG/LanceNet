@@ -44,7 +44,7 @@ public:
 
     void updateFdChannel(FdChannel* activeChannes);
     void removeFdChannel(FdChannel* sockChannel);
-
+    void disableAllEvent(FdChannel* targetChannel);
 private:
     void assertInEventLoopThread();
     // helper function for IOMultiplexer::poll()

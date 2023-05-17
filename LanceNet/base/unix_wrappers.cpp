@@ -1,6 +1,14 @@
 #include "LanceNet/base/unix_wrappers.h"
 #include <netdb.h>
 #include <sys/timerfd.h>
+#include <sys/uio.h>
+
+/* show error msg relate to errno and exit*/
+#define handle_error(msg) \
+    do{                     \
+        perror(msg);        \
+        exit(EXIT_FAILURE); \
+    } while(0)
 
 /* utils */
 char* itoa_s(int num){
@@ -30,13 +38,16 @@ ssize_t Write(int fd, const void *buf, size_t count)
     return nWrite;
 }
 
-/* show error msg relate to errno and exit*/
-#define handle_error(msg) \
-    do{                     \
-        perror(msg);        \
-        exit(EXIT_FAILURE); \
-    } while(0)
 
+
+ssize_t Readv(int __fd, const struct iovec *__iovec, int __count)
+{
+    auto n = ::readv(__fd, __iovec, __count);
+    if(n == -1){
+        handle_error("readv()");
+    }
+    return n;
+}
 
 /* sockets interface wrappers*/
 int Socket(int domain, int type, int protocol){

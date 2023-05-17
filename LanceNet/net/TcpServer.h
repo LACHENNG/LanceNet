@@ -2,7 +2,9 @@
 #ifndef LanceNet_NET_TCPSERVER_H
 #define LanceNet_NET_TCPSERVER_H
 
+#include "LanceNet/base/Time.h"
 #include "LanceNet/base/noncopyable.h"
+#include "LanceNet/net/Buffer.h"
 #include "LanceNet/base/unix_wrappers.h"
 
 #include <functional>
@@ -26,7 +28,7 @@ class TcpServer: noncopyable
 public:
     using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
     using OnNewConnectionCb = std::function<void(TcpConnectionPtr tcpConnPtr, int conn_fd, const SA_IN* peer_addr)>;
-    using OnMessageCb = std::function<void(const char* buf, size_t len)>;
+    using OnMessageCb = std::function<void(const TcpConnectionPtr&, Buffer* buf, TimeStamp ts)>;
 
     TcpServer(EventLoop* loop, int listen_port);
     ~TcpServer(); // force out-line dtor, for unique_ptr members

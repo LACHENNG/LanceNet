@@ -61,11 +61,13 @@ public:
 
     void update(FdChannel* fdChannel);
     void remove(FdChannel* fdChannel);
+    void disableAllEvent(FdChannel* fdChannel);
 
     void quit();
 
     // Transfers function execution from another thread to the current eventloop thread
     void runInLoop(PendFunction pendingfunc); //sematic
+    void pendInLoop(PendFunction pendingfunc); //sematic
 
     // A more useful wrapper to use TimerQueue
     TimerId runAt(TimeStamp when , Callback whatFunc, double delaySecs = 0);
