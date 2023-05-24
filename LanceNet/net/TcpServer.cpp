@@ -65,7 +65,7 @@ void TcpServer::removeConnection(TcpConnectionPtr conn)
     auto nErased = tcp_connections_.erase(conn->name());
     assert(nErased != 0);
     // normally TcpConnectionPtr now is destoryed
-    // so the FdChannel it contains, but at the time removeConnection is a callback called by FdChannel::handleEvent
+    // so does the FdChannel it contains, but at the time removeConnection is a callback called by FdChannel::handleEvent
     // we can not destory FdChannel when we are still using it
 
     // So must extend the lifetime of TcpConnection
@@ -73,7 +73,7 @@ void TcpServer::removeConnection(TcpConnectionPtr conn)
     // from TcpServer and cause TcpConnection deconstruct
     //owner_loop_->runInLoop(std::bind(&TcpConnection::destoryedConnection, conn.get(), conn));
     owner_loop_->pendInLoop([conn](){
-        LOG_INFOC << "destoryed in Loop Fd: " << conn->name(); 
+        LOG_INFOC << "connection destoryed in Loop with connection name = " << "[" <<  conn->name() << "]";
         conn->destoryedConnection(conn);
     });
 

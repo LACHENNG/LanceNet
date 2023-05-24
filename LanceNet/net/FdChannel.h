@@ -38,6 +38,8 @@ public:
     short revents();
     int index(); // the index of fd_ in poolfd
 
+    bool isWriteEnabled();
+
     // setter
     void events(short newevents); // set events like in pollfd.events
     void revents(short newEvent);// set revents like in pollfd.revent
@@ -49,7 +51,6 @@ public:
     void enableWriting();
     void disableWriting();
     void disableAll();
-    
     bool isNoneEvent();
 
 private:

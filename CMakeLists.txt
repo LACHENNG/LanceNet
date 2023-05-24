@@ -46,6 +46,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/LanceNet)
 
+####################################
+### 
+###
+####################################
+add_subdirectory(${CMAKE_SOURCE_DIR}/apps)
+
+
 # binary executable 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # install(TARGETS cltest )

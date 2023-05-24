@@ -33,7 +33,10 @@ ssize_t Write(int fd, const void *buf, size_t count)
     int nWrite = write(fd, buf, count);
     if(nWrite < 0 && (nWrite != EAGAIN && nWrite != EWOULDBLOCK))
     {
-        handle_error("write()");
+        if(errno == EAGAIN || errno == EWOULDBLOCK){
+            return 0;
+        }
+        else handle_error("write()");
     }
     return nWrite;
 }

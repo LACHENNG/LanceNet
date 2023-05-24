@@ -1,3 +1,4 @@
+#include "LanceNet/base/unix_wrappers.h"
 #include <LanceNet/net/EventLoop.h>
 #include <LanceNet/net/TcpConnection.h>
 #include <LanceNet/net/FdChannel.h>
@@ -14,12 +15,12 @@ TcpConnection::TcpConnection(EventLoop* loop, int connfd, std::string name, cons
   : owner_loop_(loop),
     talkChannel_(std::make_unique<FdChannel>(loop, connfd)),
     name_(name),
-    peer_addr_(*peer_addr)
+    peer_addr_(*peer_addr),
+    state_(kConnecting)
 {
     talkChannel_->setReadCallback(std::bind(&TcpConnection::handleRead, this, std::placeholders::_1));
-    talkChannel_->setWriteCallback(std::bind(&TcpConnection::handleWrite, this, std::placeholders::_1));
+    talkChannel_->setWriteCallback(std::bind(&TcpConnection::handleWrite, this));
     talkChannel_->enableReading();
-    // talkChannel_->enableWriting();
 }
 
 TcpConnection::~TcpConnection()
@@ -49,7 +50,56 @@ void TcpConnection::setCloseCallback(const CloseCallback& cb)
 
 void TcpConnection::connectionEstablished()
 {
-    on_conn_established_cb_(shared_from_this(), talkChannel_->fd(), &peer_addr_);
+    if(on_conn_established_cb_){
+        on_conn_established_cb_(shared_from_this(), talkChannel_->fd(), &peer_addr_);
+    }
+    setState(kConnected);
+}
+
+
+void TcpConnection::sendInLoop(const void* message, size_t len)
+{
+    owner_loop_->assertInEventLoopThread();
+
+    // try to send directly and append the remains to OutputBuffer
+    int nWrote = 0;
+    if(outputBuffer_.readableBytes() == 0 && state_ == kConnected)
+    {
+        int n = Write(talkChannel_->fd(), message, len);
+        nWrote += n;
+    }
+
+    if(nWrote < len && state_ == kConnected){
+        outputBuffer_.append(static_cast<const char*>(message) + nWrote, len - nWrote);
+        // FIXME: may have bug?
+        if(!talkChannel_->isWriteEnabled()){
+            talkChannel_->enableWriting();
+        }
+    }
+}
+
+void TcpConnection::send(const void* message, size_t len)
+{
+    sendInLoop(message, len);
+}
+
+void TcpConnection::send(const std::string& message)
+{
+    send(message.data(), message.size());
+}
+
+void TcpConnection::shutdown()
+{
+    // if(state_ == kConnected){
+    //     setState(kDisConnecting);
+    //     shutdownInLoop();
+    // }
+
+}
+
+void TcpConnection::setState(StateE s)
+{
+    state_ = s;
 }
 
 void TcpConnection::handleRead(TimeStamp ts)
@@ -72,17 +122,33 @@ void TcpConnection::handleRead(TimeStamp ts)
 
 void TcpConnection::destoryedConnection(TcpConnectionPtr conn)
 {
+    owner_loop_->assertInEventLoopThread();
+    assert(state_ == kConnected);
+    setState(kDisConnected);
     owner_loop_->remove(conn->talkChannel_.get());
 }
 
-void TcpConnection::handleWrite(TimeStamp ts)
+// try to send the remain data in output buffer
+void TcpConnection::handleWrite()
 {
+    owner_loop_->assertInEventLoopThread();
+    int nreadable = outputBuffer_.readableBytes();
+    int nWrote = ::Write(talkChannel_->fd(),
+                        outputBuffer_.peek(),
+                        outputBuffer_.readableBytes());
+    outputBuffer_.retrieve(nWrote);
+    assert(outputBuffer_.readableBytes() == nreadable - nWrote);
 
+    // unregister writing as we are using level triggle
+    if(nWrote == nreadable && talkChannel_->isWriteEnabled()){
+        talkChannel_->disableWriting();
+    }
 }
 
 void TcpConnection::handleClose()
 {
     owner_loop_->assertInEventLoopThread();
+    assert(state_ == kConnected);
     LOG_INFOC << "TcpConnection::handleClose()";
     talkChannel_->disableAll();
     assert(closeCallback_);

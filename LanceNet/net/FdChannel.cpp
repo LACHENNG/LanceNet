@@ -135,6 +135,11 @@ int FdChannel::index()
     return index_;
 }
 
+bool FdChannel::isWriteEnabled()
+{
+    return static_cast<bool>(events_ & kWriteEvent);
+}
+
 // setter
 void FdChannel::events(short newEvents)
 {
@@ -150,9 +155,6 @@ void FdChannel::index(int newIndex)
 {
     index_ = newIndex;
 }
-
-
-
 
 } // namespace net
 } // namespace LanceNet

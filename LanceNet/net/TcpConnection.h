@@ -53,18 +53,34 @@ public:
     // but in loop
     void connectionEstablished();
 
+    // thread safe
+    void send(const void* message, size_t len);
+    // thread safe
+    void send(const std::string& message);
+    // thread safe
+    void shutdown();
+
     // runInRoop
     void destoryedConnection(TcpConnectionPtr conn);
     std::string name() { return name_ ;}
 
 private:
+    enum StateE{kConnecting, kConnected, kDisConnecting, kDisConnected};
+
+    void setState(StateE s);
     // Not thread safe
     // but in loop
     void handleRead(TimeStamp ts);
-    void handleWrite(TimeStamp ts);
+    // callback when talkChannel_->fd() is writeable
+    // Not thread safe
+    // but in loop
+    void handleWrite();
 
     void handleClose();
     void handleError();
+
+    void sendInLoop(const void* message, size_t len);
+    void shutdownInLoop();
 
     EventLoop* owner_loop_;
     std::unique_ptr<FdChannel> talkChannel_;
@@ -83,6 +99,8 @@ private:
     // read,write buffer
     Buffer inputBuffer_;
     Buffer outputBuffer_;
+
+    StateE state_;
 };
 
 } // namespace net
