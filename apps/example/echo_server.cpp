@@ -3,6 +3,7 @@
 #include "LanceNet/net/EventLoop.h"
 #include "LanceNet/net/TcpConnection.h"
 #include <LanceNet/net/TcpServer.h>
+#include <unistd.h>
 
 using namespace LanceNet;
 using namespace net;
@@ -11,8 +12,10 @@ EventLoop* gloop;
 
 void OnMessage(TcpConnection::TcpConnectionPtr conn, Buffer* buffer, TimeStamp ts)
 {
+    ::sleep(4);
     //echo
-    conn->send(buffer->retrieveAllAsString());
+    std::string res = buffer->retrieveAllAsString();
+    conn->send(res);
 }
 
 

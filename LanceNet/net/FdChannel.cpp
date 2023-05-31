@@ -30,7 +30,6 @@ FdChannel::FdChannel(EventLoop* loop, int fd)
 FdChannel::~FdChannel()
 {
     assert(!eventHandling);
-    // owner_loop_->remove(this);
     Close(fd_);
     LOG_INFOC << "FdChannel[fd=" << fd_ << "]" << " unregistered and closed";
 }

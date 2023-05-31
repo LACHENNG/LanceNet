@@ -45,7 +45,7 @@ public:
     void setOnDisconnectCb(const OnCloseConnectionCb& cb);
 
     // use internally by TcpServer or TcpClient
-    // usually it is bind to TcpServer::removeChannel
+    // usually it is bind to TcpServer::removeConnection
     void setCloseCallback(const CloseCallback& cb);
 
     // called by TcpServer
@@ -79,6 +79,7 @@ private:
     void handleClose();
     void handleError();
 
+    void pendSendInLoop(std::string message);
     void sendInLoop(const void* message, size_t len);
     void shutdownInLoop();
 

@@ -50,12 +50,16 @@ void TcpConnection::setCloseCallback(const CloseCallback& cb)
 
 void TcpConnection::connectionEstablished()
 {
+    setState(kConnected);
     if(on_conn_established_cb_){
         on_conn_established_cb_(shared_from_this(), talkChannel_->fd(), &peer_addr_);
     }
-    setState(kConnected);
 }
 
+void TcpConnection::pendSendInLoop(std::string message){
+    owner_loop_->assertInEventLoopThread();
+    sendInLoop(message.data(), message.size());
+}
 
 void TcpConnection::sendInLoop(const void* message, size_t len)
 {
@@ -69,7 +73,7 @@ void TcpConnection::sendInLoop(const void* message, size_t len)
         nWrote += n;
     }
 
-    if(nWrote < len && state_ == kConnected){
+    if(nWrote < static_cast<int>(len) && state_ == kConnected){
         outputBuffer_.append(static_cast<const char*>(message) + nWrote, len - nWrote);
         // FIXME: may have bug?
         if(!talkChannel_->isWriteEnabled()){
@@ -78,23 +82,41 @@ void TcpConnection::sendInLoop(const void* message, size_t len)
     }
 }
 
+void TcpConnection::shutdownInLoop()
+{
+    owner_loop_->assertInEventLoopThread();
+    if(!talkChannel_->isWriteEnabled())
+    {
+        // no more data is waiting to be sent, so we can shutdown WR directly
+        Shutdown(talkChannel_->fd(), SHUT_WR);
+    }
+}
+
 void TcpConnection::send(const void* message, size_t len)
 {
-    sendInLoop(message, len);
+    if(state_ == kDisConnecting)
+        return;
+    if(owner_loop_->isInEventLoopThread()){
+        sendInLoop(message, len);
+    }else{
+        std::string str(static_cast<const char*>(message), static_cast<const char*>(message) + len);
+        owner_loop_->pendInLoop(std::bind(&TcpConnection::pendSendInLoop, this, std::move(str)));
+    }
 }
 
 void TcpConnection::send(const std::string& message)
 {
+    if(state_ == kDisConnecting)
+        return;
     send(message.data(), message.size());
 }
 
 void TcpConnection::shutdown()
 {
-    // if(state_ == kConnected){
-    //     setState(kDisConnecting);
-    //     shutdownInLoop();
-    // }
-
+    if(state_ == kConnected){
+        setState(kDisConnecting);
+        owner_loop_->runInLoop(std::bind(&TcpConnection::shutdownInLoop, this));
+    }
 }
 
 void TcpConnection::setState(StateE s)
@@ -123,32 +145,40 @@ void TcpConnection::handleRead(TimeStamp ts)
 void TcpConnection::destoryedConnection(TcpConnectionPtr conn)
 {
     owner_loop_->assertInEventLoopThread();
-    assert(state_ == kConnected);
-    setState(kDisConnected);
+    assert(state_ == kDisConnecting || state_ == kConnected);
     owner_loop_->remove(conn->talkChannel_.get());
+    setState(kDisConnected);
 }
 
 // try to send the remain data in output buffer
+// if the state_ is kDisConnecting, the actual shutdown is called after all the data is sent
 void TcpConnection::handleWrite()
 {
     owner_loop_->assertInEventLoopThread();
+    if(!talkChannel_->isWriteEnabled()){
+        LOG_INFOC << "Connection is down, no more writing";
+        return ;
+    }
     int nreadable = outputBuffer_.readableBytes();
     int nWrote = ::Write(talkChannel_->fd(),
                         outputBuffer_.peek(),
                         outputBuffer_.readableBytes());
     outputBuffer_.retrieve(nWrote);
-    assert(outputBuffer_.readableBytes() == nreadable - nWrote);
+    assert(static_cast<int>(outputBuffer_.readableBytes()) == nreadable - nWrote);
 
     // unregister writing as we are using level triggle
     if(nWrote == nreadable && talkChannel_->isWriteEnabled()){
         talkChannel_->disableWriting();
+        if(state_ == kDisConnected){
+            shutdownInLoop();
+        }
     }
 }
 
 void TcpConnection::handleClose()
 {
     owner_loop_->assertInEventLoopThread();
-    assert(state_ == kConnected);
+    assert(state_ == kConnected || state_ == kDisConnecting);
     LOG_INFOC << "TcpConnection::handleClose()";
     talkChannel_->disableAll();
     assert(closeCallback_);

@@ -198,6 +198,12 @@ void Getaddrinfo(const char *node, const char *service,
 
 
 
+void Shutdown(int __fd, int __how){
+    int code = shutdown(__fd, __how);
+    if(code < 0){
+        handle_error("shutdown");
+    }
+}
 
 int Timerfd_create(__clockid_t __clock_id, int __flags)
 {

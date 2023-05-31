@@ -57,7 +57,7 @@ int Accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 void Getaddrinfo(const char *node, const char *service,
                        const struct addrinfo *hints,
                        struct addrinfo **res);
-
+void Shutdown(int __fd, int __how);
 /* Wrappers for client/server helper functinos*/
 // return a nonblock fd
 int Open_clientfd(const char *hostname, int port, bool nonblock = true);
