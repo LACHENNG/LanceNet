@@ -18,6 +18,7 @@ add_executable(acceptorClient ./Acceptor_test_client.cpp )
 add_executable(TcpServer ./TcpServer_test.cpp )
 add_executable(TcpClient ./TcpServer_test_client.cpp )
 
+add_executable(EventLoopPool_test ./EventLoopPool_test.cpp)
 
 target_link_libraries(buffer_test PRIVATE
     LanceNet_net
@@ -93,6 +94,10 @@ target_link_libraries(TcpServer PRIVATE
     LanceNet_base
 )
 target_link_libraries(TcpClient PRIVATE
+    LanceNet_net
+    LanceNet_base
+)
+target_link_libraries(EventLoopPool_test PRIVATE
     LanceNet_net
     LanceNet_base
 )
