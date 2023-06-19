@@ -53,7 +53,7 @@ private:
        // };
 public:
 
-    explicit Thread(ThreadFunc threadFunc, std::string name = std::string("Default Name"));
+    Thread(ThreadFunc threadFunc, std::string name = std::string("Default Name"));
 
     ~Thread();
     void start();

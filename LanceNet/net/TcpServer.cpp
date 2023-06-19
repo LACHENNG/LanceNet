@@ -4,6 +4,7 @@
 #include <LanceNet/base/Logging.h>
 #include <LanceNet/net/TcpServer.h>
 #include <LanceNet/net/TcpConnection.h>
+#include <LanceNet/net/EventLoopPool.h>
 
 #include <functional>
 #include <memory>
@@ -49,16 +50,19 @@ void TcpServer::onNewConnection(int conn_fd, const SA_IN* peer_addr)
     ++totalCreatedTcpConnections_;
 
     auto conn_name = name + itoa_s(totalCreatedTcpConnections_);
-    auto tcpConnPtr = std::make_shared<TcpConnection>(owner_loop_,
+    auto ioLoop = threadPool_->getNextLoop();
+    auto tcpConnPtr = std::make_shared<TcpConnection>(ioLoop,
             conn_fd, conn_name, peer_addr);
 
     tcpConnPtr->setOnConnectionEstablishedCb(onNewConnCb_);
     tcpConnPtr->setOnMessageCb(onMessageCb_);
     tcpConnPtr->setCloseCallback(std::bind(&TcpServer::removeConnection, this, _1));
-    tcpConnPtr->connectionEstablished();
+    ioLoop->runInLoop(std::bind(&TcpConnection::connectionEstablished, tcpConnPtr));
+    // tcpConnPtr->connectionEstablished();
     tcp_connections_[conn_name] = tcpConnPtr;
 }
-void TcpServer::removeConnection(TcpConnectionPtr conn)
+
+void TcpServer::removeConnectionInLoop(const TcpConnectionPtr& conn)
 {
     owner_loop_->assertInEventLoopThread();
     LOG_INFOC << "TcpServer::removeConnection [" << conn->name() << "]";
@@ -72,11 +76,19 @@ void TcpServer::removeConnection(TcpConnectionPtr conn)
     // otherwise after closeCallback_ with unregister itself
     // from TcpServer and cause TcpConnection deconstruct
     //owner_loop_->runInLoop(std::bind(&TcpConnection::destoryedConnection, conn.get(), conn));
-    owner_loop_->pendInLoop([conn](){
+    auto ioLoop = conn->getLoop();
+    ioLoop->pendInLoop([conn](){
         LOG_INFOC << "connection destoryed in Loop with connection name = " << "[" <<  conn->name() << "]";
         conn->destoryedConnection(conn);
     });
 
+}
+
+void TcpServer::removeConnection(const TcpConnectionPtr& conn)
+{
+    // FIXME: unsafe
+    auto ioLoop = conn->getLoop();
+    ioLoop->runInLoop(std::bind(&TcpServer::removeConnectionInLoop, this, conn));
 }
 
 } // namespace net

@@ -64,6 +64,8 @@ public:
     void destoryedConnection(TcpConnectionPtr conn);
     std::string name() { return name_ ;}
 
+    EventLoop* getLoop() const{ return owner_loop_;}
+
 private:
     enum StateE{kConnecting, kConnected, kDisConnecting, kDisConnected};
 

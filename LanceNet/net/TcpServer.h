@@ -20,7 +20,7 @@ namespace net
 class EventLoop;
 class Acceptor;
 class TcpConnection;
-
+class EventLoopPool;
 // TcpServer class manage the TcpConnection obtained by accept(2).
 // It is a class that is directly used by the user. The lifecycle is controlled by the user
 class TcpServer: noncopyable
@@ -55,16 +55,19 @@ private:
     std::string name;
     int totalCreatedTcpConnections_;  // in loop
 
-    // remove TcpConnection
     // not thread safe
     // but in loop
-    void removeConnection(TcpConnectionPtr conn);
+    void removeConnectionInLoop(const TcpConnectionPtr& conn);
+    // thread safe
+    void removeConnection(const TcpConnectionPtr& conn);
 
     OnNewConnectionCb onNewConnCb_;
     OnMessageCb onMessageCb_;
 
     // managing TcpConnections
     std::unordered_map<std::string, TcpConnectionPtr> tcp_connections_;
+
+    std::unique_ptr<EventLoopPool> threadPool_;
 };
 
 } // namespace net

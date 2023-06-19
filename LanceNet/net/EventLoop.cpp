@@ -109,6 +109,9 @@ void EventLoop::disableAllEvent(FdChannel *fdChannel)
 void EventLoop::quit()
 {
     running_ = false;
+    // FIXME: wakeup more elegantly
+    // runInLoopImpl_->wakeup(); eg.
+    runInLoopImpl_->pend([](){std::cout<<"quit"<<std::endl;});
 }
 
 void EventLoop::runInLoop(PendFunction functor)

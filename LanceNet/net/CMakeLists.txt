@@ -20,6 +20,8 @@ set(SRC_LIST
     Acceptor.cpp
     TcpServer.cpp
     TcpConnection.cpp
+
+    EventLoopPool.cpp
 )
 
 add_library(LanceNet_net ${SRC_LIST})
