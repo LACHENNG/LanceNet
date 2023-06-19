@@ -29,6 +29,7 @@ TimerQueue::TimerQueue(EventLoop* loop)
     timerfd_(createTimerfd()),
     fdChannelPtr_(std::make_unique<FdChannel>(loop, timerfd_))
 {
+    LOG_INFOC << "made timer fd = " << timerfd_;
     // let the fdChannel take effect
     fdChannelPtr_->setReadCallback(std::bind(&TimerQueue::handleTimeouts, this));
     fdChannelPtr_->enableReading();
@@ -36,7 +37,7 @@ TimerQueue::TimerQueue(EventLoop* loop)
 
 TimerQueue::~TimerQueue()
 {
-    Close(timerfd_);
+    // default dtor is ok
     // Note fdChannel is auto unregistered by its own dtor
 }
 
@@ -113,19 +114,22 @@ int TimerQueue::createTimerfd()
     return timerfd;
 }
 
+void TimerQueue::handleRead()
+{
+    uint64_t tmp;
+    Read(timerfd_, &tmp, sizeof(tmp));
+    std::cout << tmp << std::endl;
+}
+
 void TimerQueue::handleTimeouts()
 {
-
-    //LOG_INFOC << "handleTimeouts before getExpired timer_que_.size() = " << timer_que_.size() << " activeTimers_.size() = " << activeTimers_.size();
+    handleRead();
     std::vector<TimerPtr> expiredTimers =  getExpired(TimeStamp::now());
-    //LOG_INFOC << "handleTimeouts after getExpired timer_que_.size() = " << timer_que_.size() << " activeTimers_.size() = " << activeTimers_.size();
-    //LOG_INFOC << "expiredTimers.size() = " << expiredTimers.size();
     for(auto& timerPtr : expiredTimers ){
         timerPtr->OnExpiration();
     }
     // check if the expired Timers is repeatable, and properly reset the timerfd
     reset(expiredTimers);
-    //LOG_INFOC << "handleTimeouts after reset(expiredTimers) timer_que_.size() = " << timer_que_.size() << " activeTimers_.size() = " << activeTimers_.size();
 }
 
 bool TimerQueue::insertTimer(TimerPtr timer)
