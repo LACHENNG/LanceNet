@@ -97,6 +97,7 @@ std::vector<TimerQueue::TimerPtr> TimerQueue::getExpired(TimeStamp now)
         activeTimers_.erase(TimerId(timer.second.get(), timer.second->id()));
     }
 
+    assert(timer_que_.size() == activeTimers_.size());
     std::vector<TimerPtr> expiredTimers;
     auto ExtractTimerPtrFunc = [&](auto& entry){
         expiredTimers.push_back(entry.second);
@@ -118,7 +119,6 @@ void TimerQueue::handleRead()
 {
     uint64_t tmp;
     Read(timerfd_, &tmp, sizeof(tmp));
-    std::cout << tmp << std::endl;
 }
 
 void TimerQueue::handleTimeouts()
@@ -166,6 +166,8 @@ void TimerQueue::resetTimerfd(TimeStamp newAlarmTime)
 
 void TimerQueue::reset(std::vector<TimerPtr>& expiredTimers)
 {
+    assert(activeTimers_.size() == timer_que_.size());
+
     if(expiredTimers.empty())
         return;
 
@@ -185,7 +187,6 @@ void TimerQueue::reset(std::vector<TimerPtr>& expiredTimers)
             // the timer that not used will automatically deleted by unique_ptr as living the scope of local expiredTimers variable
             assert(timerPtr.use_count() == 1);
             freelist.push_back(timerPtr);
-            activeTimers_.erase(timerid);
         }
 
     }

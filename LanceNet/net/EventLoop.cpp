@@ -27,6 +27,7 @@ __thread EventLoop* tl_eventLoopPtrOfThisThread;
 EventLoop::EventLoop()
   : tid_(ThisThread::Gettid()),
     running_(false),
+    exit_(false),
     multiplexer_(std::make_unique<IOMultiplexer>(this)),
     runInLoopImpl_(std::make_unique<RunInLoopImpl>(this)),
     timerQueueUptr_(std::make_unique<TimerQueue>(this))
@@ -49,7 +50,7 @@ void EventLoop::StartLoop(){
 
     //LOG_INFOC << "Eventloop::StartLoop at thread : " << ThisThread::Gettid();
 
-    while(running_){
+    while(running_ && !exit_){
         activeFdChannels_.clear();
 
         // a negative timeout means infinite timeout
@@ -108,7 +109,7 @@ void EventLoop::disableAllEvent(FdChannel *fdChannel)
 }
 void EventLoop::quit()
 {
-    running_ = false;
+    exit_ = true;
     // FIXME: wakeup more elegantly
     // runInLoopImpl_->wakeup(); eg.
     runInLoopImpl_->pend([](){std::cout<<"quit"<<std::endl;});

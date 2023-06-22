@@ -106,6 +106,7 @@ private:
     // the thread id of this EventLoop
     pid_t tid_;
     std::atomic_bool running_;
+    std::atomic_bool exit_;
 
     // active FdChannel that has events to be handled
     std::vector<FdChannel*> activeFdChannels_;
