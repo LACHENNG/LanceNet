@@ -92,7 +92,7 @@ int Accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen){
 
 
 /* Wrappers for client/server helper functinos*/
-int Open_clientfd(const char *hostname, int port, bool nonblock){
+int Open_clientfd(const char *hostname, int port, bool nonblockfd, bool exitOnError){
     /* Obtain address(es) matching host/port */
     struct addrinfo hints;
     bzero(&hints, sizeof(struct addrinfo));
@@ -105,7 +105,7 @@ int Open_clientfd(const char *hostname, int port, bool nonblock){
     Getaddrinfo(hostname, sport, &hints, &listp);
 
     int clientfd = -1;
-    int rc = 0;
+    int rc = -1;
     /* try each address structures until we bind successfully. */
     for(p = listp; p != NULL; p = p->ai_next){
         if( (clientfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0 )
@@ -114,18 +114,19 @@ int Open_clientfd(const char *hostname, int port, bool nonblock){
         if( (rc = connect(clientfd, p->ai_addr, p->ai_addrlen)) != -1){
             break;  /* Success */
         }
-
         close(clientfd);
+        clientfd = -1;
     }
-    if(!p){
+    bool connectfailed = (p == nullptr);
+    if(connectfailed){
         perror("Error");
-        exit(EXIT_FAILURE);
+       if(exitOnError) exit(EXIT_FAILURE);
     }
     /* clean up */
     delete [] sport;
     freeaddrinfo(listp);
 
-    if(nonblock)
+    if(nonblockfd && !connectfailed)
     {
         int flags = fcntl (clientfd, F_GETFL, 0);
         if (flags == -1) {

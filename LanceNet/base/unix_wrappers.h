@@ -60,7 +60,7 @@ void Getaddrinfo(const char *node, const char *service,
 void Shutdown(int __fd, int __how);
 /* Wrappers for client/server helper functinos*/
 // return a nonblock fd
-int Open_clientfd(const char *hostname, int port, bool nonblock = true);
+int Open_clientfd(const char *hostname, int port, bool nonblockfd= true, bool exitOnError = true);
 
 int Open_listenfd(int port);
 
