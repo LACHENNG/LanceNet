@@ -206,6 +206,15 @@ void Shutdown(int __fd, int __how){
     }
 }
 
+struct sockaddr_in getPeerAddr(int sockfd) {
+  struct sockaddr sa; 
+  socklen_t addrlen = sizeof(struct sockaddr);
+
+  if (getpeername(sockfd, &sa, &addrlen) < 0) {
+    handle_error("getpeername failed");
+  }
+  return *((struct sockaddr_in *)(&sa));
+}
 int Timerfd_create(__clockid_t __clock_id, int __flags)
 {
     int timerfd = ::timerfd_create(CLOCK_MONOTONIC,

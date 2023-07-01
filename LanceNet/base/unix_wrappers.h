@@ -48,6 +48,7 @@ ssize_t Read(int fd, void *buf, size_t count);
 ssize_t Write(int fd, const void *buf, size_t count);
 
 ssize_t Readv(int __fd, const struct iovec *__iovec, int __count);
+
 /* sockets interface wrappers*/
 int Socket(int domain, int type, int protocol);
 void Bind(int sockfd, const SA* addr, socklen_t addrlen);
@@ -58,6 +59,10 @@ void Getaddrinfo(const char *node, const char *service,
                        const struct addrinfo *hints,
                        struct addrinfo **res);
 void Shutdown(int __fd, int __how);
+
+/* sockops */
+struct sockaddr_in getPeerAddr(int sockfd);
+
 /* Wrappers for client/server helper functinos*/
 // return a nonblock fd
 int Open_clientfd(const char *hostname, int port, bool nonblockfd= true, bool exitOnError = true);
