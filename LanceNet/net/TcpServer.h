@@ -6,7 +6,6 @@
 #include "LanceNet/base/noncopyable.h"
 #include "LanceNet/net/Buffer.h"
 #include "LanceNet/base/unix_wrappers.h"
-
 #include <functional>
 #include <unordered_map>
 #include <memory>
@@ -67,7 +66,7 @@ private:
     // managing TcpConnections
     std::unordered_map<std::string, TcpConnectionPtr> tcp_connections_;
 
-    std::unique_ptr<EventLoopPool> threadPool_;
+    std::unique_ptr<EventLoopPool> eventloopPool_;
 };
 
 } // namespace net

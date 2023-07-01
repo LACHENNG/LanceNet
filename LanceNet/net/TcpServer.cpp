@@ -20,7 +20,8 @@ TcpServer::TcpServer(EventLoop* loop, int listen_port)
   : owner_loop_(loop),
     acceptor_(std::make_unique<Acceptor>(loop, listen_port)),
     name("TcpConnection "),
-    totalCreatedTcpConnections_(0)
+    totalCreatedTcpConnections_(0),
+    eventloopPool_(std::make_unique<EventLoopPool>(owner_loop_))
 {
 }
 
@@ -50,7 +51,7 @@ void TcpServer::onNewConnection(int conn_fd, const SA_IN* peer_addr)
     ++totalCreatedTcpConnections_;
 
     auto conn_name = name + itoa_s(totalCreatedTcpConnections_);
-    auto ioLoop = threadPool_->getNextLoop();
+    auto ioLoop = eventloopPool_->getNextLoop();
     auto tcpConnPtr = std::make_shared<TcpConnection>(ioLoop,
             conn_fd, conn_name, peer_addr);
 
@@ -87,8 +88,9 @@ void TcpServer::removeConnectionInLoop(const TcpConnectionPtr& conn)
 void TcpServer::removeConnection(const TcpConnectionPtr& conn)
 {
     // FIXME: unsafe
-    auto ioLoop = conn->getLoop();
-    ioLoop->runInLoop(std::bind(&TcpServer::removeConnectionInLoop, this, conn));
+    // auto ioLoop = conn->getLoop();
+    // ioLoop->runInLoop(std::bind(&TcpServer::removeConnectionInLoop, this, conn));
+    removeConnectionInLoop(conn);
 }
 
 } // namespace net
