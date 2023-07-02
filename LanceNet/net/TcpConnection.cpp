@@ -43,6 +43,10 @@ void TcpConnection::setOnDisconnectCb(const OnCloseConnectionCb& cb)
     on_close_cb_ = cb;
 }
 
+void TcpConnection::setOnWriteCompleteCb(const OnWriteCompleteCb& cb)
+{
+    on_writecomplete_cb_ = cb;
+}
 void TcpConnection::setCloseCallback(const CloseCallback& cb)
 {
     closeCallback_ = cb;
@@ -56,29 +60,30 @@ void TcpConnection::connectionEstablished()
     }
 }
 
-void TcpConnection::pendSendInLoop(std::string message){
-    owner_loop_->assertInEventLoopThread();
-    sendInLoop(message.data(), message.size());
-}
-
 void TcpConnection::sendInLoop(const void* message, size_t len)
 {
     owner_loop_->assertInEventLoopThread();
 
+    if(state_ != kConnected){
+        return ;
+    }
     // try to send directly and append the remains to OutputBuffer
     int nWrote = 0;
-    if(outputBuffer_.readableBytes() == 0 && state_ == kConnected)
+    if(outputBuffer_.readableBytes() == 0 )
     {
         int n = Write(talkChannel_->fd(), message, len);
         nWrote += n;
     }
-
-    if(nWrote < static_cast<int>(len) && state_ == kConnected){
+    // FIXME: this may have the problem that the client receive data too slow
+    // the buffer may grow too fast in server
+    if(nWrote < static_cast<int>(len)){
         outputBuffer_.append(static_cast<const char*>(message) + nWrote, len - nWrote);
-        // FIXME: may have bug?
         if(!talkChannel_->isWriteEnabled()){
             talkChannel_->enableWriting();
         }
+    }
+    if(nWrote == static_cast<int>(len) && on_writecomplete_cb_){
+        on_writecomplete_cb_(shared_from_this());
     }
 }
 
@@ -100,7 +105,9 @@ void TcpConnection::send(const void* message, size_t len)
         sendInLoop(message, len);
     }else{
         std::string str(static_cast<const char*>(message), static_cast<const char*>(message) + len);
-        owner_loop_->pendInLoop(std::bind(&TcpConnection::pendSendInLoop, this, std::move(str)));
+        owner_loop_->pendInLoop([p=shared_from_this(), message = std::move(str)](){
+            p->sendInLoop(message.data(), message.size());
+        });
     }
 }
 
@@ -167,11 +174,16 @@ void TcpConnection::handleWrite()
     assert(static_cast<int>(outputBuffer_.readableBytes()) == nreadable - nWrote);
 
     // unregister writing as we are using level triggle
-    if(nWrote == nreadable && talkChannel_->isWriteEnabled()){
+    assert(talkChannel_->isWriteEnabled());
+    if(nWrote == nreadable){
         talkChannel_->disableWriting();
+        if(on_writecomplete_cb_){
+            on_writecomplete_cb_(shared_from_this());
+        }
         if(state_ == kDisConnected){
             shutdownInLoop();
         }
+        
     }
 }
 

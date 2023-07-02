@@ -29,7 +29,8 @@ public:
     using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
     using OnNewConnectionEstablishedCb = std::function<void(TcpConnectionPtr connPtr, int conn_fd, const SA_IN* peer_addr)>;
     using OnMessageCb = std::function<void(const TcpConnectionPtr&, Buffer* buf, TimeStamp ts)>;
-
+    using OnWriteCompleteCb = std::function<void (const TcpConnectionPtr& connection)>;
+   
     using OnCloseConnectionCb = OnNewConnectionEstablishedCb;
     using CloseCallback = std::function<void(TcpConnectionPtr conn_ptr)>;
 
@@ -41,14 +42,19 @@ public:
     // registered user callback
     // not thread safe
     void setOnConnectionEstablishedCb(const OnNewConnectionEstablishedCb& cb);
+    // set user callback
+    // not thread safe  
     void setOnMessageCb(const OnMessageCb& cb);
     void setOnDisconnectCb(const OnCloseConnectionCb& cb);
+    void setOnWriteCompleteCb(const OnWriteCompleteCb& cb);
 
     // use internally by TcpServer or TcpClient
     // usually it is bind to TcpServer::removeConnection
+    // it is not the user interface
     void setCloseCallback(const CloseCallback& cb);
 
-    // called by TcpServer
+    // called by its owner like TcpServer
+    // it is not the user interface
     // not thread safe
     // but in loop
     void connectionEstablished();
@@ -81,7 +87,6 @@ private:
     void handleClose();
     void handleError();
 
-    void pendSendInLoop(std::string message);
     void sendInLoop(const void* message, size_t len);
     void shutdownInLoop();
 
@@ -96,6 +101,8 @@ private:
     OnNewConnectionEstablishedCb on_conn_established_cb_;
     OnMessageCb on_message_cb_;
     OnCloseConnectionCb on_close_cb_;
+    OnWriteCompleteCb on_writecomplete_cb_;
+
     // bind to TcpServer::removeConnection
     CloseCallback closeCallback_;
 
