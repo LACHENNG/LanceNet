@@ -39,6 +39,7 @@ public:
     int index(); // the index of fd_ in poolfd
 
     bool isWriteEnabled();
+    bool isReadEnabled();
 
     // setter
     void events(short newevents); // set events like in pollfd.events
@@ -61,11 +62,12 @@ private:
     // interact with EventLoop, let the fd event take effect
     void update();
 
-private:
+public:
     static const short kReadEvent;
     static const short kWriteEvent;
     static const short kNoneEvent;
     static const short kErrorEvent;
+private:
     // assert that Channel is not deconstruct during handing events
     bool eventHandling;
     const int fd_;

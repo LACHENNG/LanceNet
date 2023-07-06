@@ -139,6 +139,10 @@ bool FdChannel::isWriteEnabled()
     return static_cast<bool>(events_ & kWriteEvent);
 }
 
+bool FdChannel::isReadEnabled()
+{
+    return static_cast<bool>(events_ & kReadEvent);
+}
 // setter
 void FdChannel::events(short newEvents)
 {
