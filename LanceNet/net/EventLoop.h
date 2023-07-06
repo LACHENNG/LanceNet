@@ -6,9 +6,7 @@
 #include "LanceNet/base/Time.h"
 #include "LanceNet/base/noncopyable.h"
 #include "LanceNet/base/Mutex.h"
-#include "LanceNet/net/IOMultiplexer.h"
 #include "LanceNet/net/TimerId.h"
-
 #include <atomic>
 #include <unordered_map>
 #include <functional>
@@ -23,7 +21,7 @@ namespace net
 class EventLoop;
 class FdChannel;
 class TimerQueue;
-// class IOMultiplexer;
+class IOMultiplexer;
 //
 
 extern __thread EventLoop* tl_eventLoopPtrOfThisThread;
@@ -112,7 +110,7 @@ private:
     std::vector<FdChannel*> activeFdChannels_;
 
     // Poller to get active Sockchannels that have events to handle with;
-    // IOMultiplexer* multiplexer_;
+    // Epoller* multiplexer_;
     std::unique_ptr<IOMultiplexer> multiplexer_;
 
     std::unique_ptr<RunInLoopImpl> runInLoopImpl_;

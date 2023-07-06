@@ -206,6 +206,50 @@ void Shutdown(int __fd, int __how){
     }
 }
 
+int Epoll_create(int __size)
+{
+    int rc = epoll_create(__size);
+    if(rc == -1){
+        handle_error("epoll_create");
+    }
+    return rc;
+}
+
+int Epoll_create1(int __flags)
+{
+    int rc = epoll_create1(__flags);
+    if(rc == -1){
+        handle_error("epoll_create1");
+    }
+    return rc;
+}
+
+void Epoll_ctl(int __epfd, int __op, int __fd, epoll_event *event)
+{
+    int rc = ::epoll_ctl(__epfd, __op, __fd, event);
+    if(rc == -1){
+        handle_error("epoll_ctl");
+    } 
+}
+
+int Epoll_wait(int __epfd, epoll_event *__events, int __maxevents, int __timeout)
+{
+    int nready = ::epoll_wait(__epfd, __events, __maxevents, __timeout);
+    if(nready == -1){
+        handle_error("epoll_wait");
+    }
+    return nready;
+}
+
+int Select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
+{
+    int n = ::select(nfds, readfds, writefds, exceptfds, timeout);
+    if(n == -1){
+        handle_error("select");
+    }
+    return n;
+}
+
 struct sockaddr_in getPeerAddr(int sockfd) {
   struct sockaddr sa; 
   socklen_t addrlen = sizeof(struct sockaddr);

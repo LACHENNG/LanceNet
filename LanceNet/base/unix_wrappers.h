@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/select.h>
 #include <sys/timerfd.h>
 #include <sys/uio.h>
 #include <unistd.h>
@@ -25,6 +26,7 @@
 #include <fcntl.h>
 
 #include <sys/eventfd.h>
+#include <sys/epoll.h>
 /* defined by glic*/
 // extern int errno;
 
@@ -60,6 +62,13 @@ void Getaddrinfo(const char *node, const char *service,
                        struct addrinfo **res);
 void Shutdown(int __fd, int __how);
 
+/* epoll IO Multiplexing*/
+int Epoll_create(int __size);
+int Epoll_create1(int __flags);
+void Epoll_ctl(int __epfd, int __op, int __fd, epoll_event *event);
+int Epoll_wait(int __epfd, epoll_event *__events, int __maxevents, int __timeout);
+
+int Select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *__restrict __timeout);
 /* sockops */
 struct sockaddr_in getPeerAddr(int sockfd);
 

@@ -1,11 +1,9 @@
-#include "LanceNet/base/Mutex.h"
-#include "LanceNet/base/Time.h"
-#include "LanceNet/base/unix_wrappers.h"
-#include "LanceNet/base/ThisThread.h"
-#include <LanceNet/net/TimerQueue.h>
-#include "LanceNet/net/Timer.h"
-#include "LanceNet/net/FdChannel.h"
 #include <LanceNet/net/EventLoop.h>
+#include <LanceNet/base/unix_wrappers.h>
+#include <LanceNet/net/TimerQueue.h>
+#include <LanceNet/net/FdChannel.h>
+#include <LanceNet/net/EventLoop.h>
+#include <LanceNet/net/Timer.h>
 #include <LanceNet/net/IOMultiplexer.h>
 #include <LanceNet/base/Logging.h>
 
@@ -28,7 +26,7 @@ EventLoop::EventLoop()
   : tid_(ThisThread::Gettid()),
     running_(false),
     exit_(false),
-    multiplexer_(std::make_unique<IOMultiplexer>(this)),
+    multiplexer_(IOMultiplexer::getDefaultIOMultiplexer(this)),
     runInLoopImpl_(std::make_unique<RunInLoopImpl>(this)),
     timerQueueUptr_(std::make_unique<TimerQueue>(this))
 {
