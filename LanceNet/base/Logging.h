@@ -28,7 +28,7 @@ namespace LanceNet
 
 // There is a global defualt LogLevel which will influence the manner of Logger
 // specifically, when Logger.loglevel <= g_loglevel, the log will be ignored
-
+// alse the LOG_LEVEL is define to 'LOG_TRACE < LOG_DEBUG < LOG_INFO < LOG_WARN < LOG_ERROR < LOG_FATAL'
 // log format example [LOG_LEVEL] 20230101 12:30:00.1234431 tid Message - File:Line
 class Logger : noncopyable{
 public:
@@ -36,6 +36,7 @@ public:
 
     // log level definitions
     enum LogLevel{
+        TRACE,
         DEBUG,
         INFO,
         WARN,
@@ -116,15 +117,21 @@ Logger::LogLevel setGlobalLogLevel(Logger::LogLevel level);
 } // namespace LanceNet
 
 // non color version
-#define LOG_WARN  LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::WARN).stream()
+
+#define LOG_TRACE LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::TRACE).stream()
 #define LOG_INFO  LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::INFO).stream()
+#define LOG_WARN  LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::WARN).stream()
+#define LOG_DEBUG  LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::DEBUG).stream()
+#define LOG_ERROR  LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::ERROR).stream()
 #define LOG_FATAL LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::FATAL).stream()
 
 // color versoin
+#define LOG_TRACEC LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::TRACE, LanceNet::ColorText::GREEN).stream()
 #define LOG_WARNC  LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::WARN, LanceNet::ColorText::YELLOW).stream()
+#define LOG_DEBUGC  LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::DEBUG, LanceNet::ColorText::GREEN).stream()
+#define LOG_ERRORC LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::ERROR, LanceNet::ColorText::RED).stream()
 #define LOG_INFOC  LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::INFO, LanceNet::ColorText::GREEN).stream()
 #define LOG_FATALC LanceNet::Logger(BASENAME(__FILE__), __LINE__, LanceNet::Logger::LogLevel::FATAL, LanceNet::ColorText::RED).stream()
-
 
 
 #endif // LanceNet_BASE_LOGGING_LOGGING_H

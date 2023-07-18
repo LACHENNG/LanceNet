@@ -4,7 +4,7 @@
 namespace LanceNet
 {
 
-Logger::LogLevel g_loglevel = Logger::LogLevel::INFO;
+Logger::LogLevel g_loglevel = Logger::LogLevel::TRACE;
 
 // set global log level
 Logger::LogLevel setGlobalLogLevel(Logger::LogLevel level)
@@ -17,6 +17,7 @@ Logger::LogLevel setGlobalLogLevel(Logger::LogLevel level)
 
 const char* Logger::logLevelNames[] =
 {
+    "TRACE",
     "DEBUG",
     "INFO ",
     "WARN ",
@@ -52,6 +53,8 @@ Logger::LogImpl::LogImpl(Logger::LogLevel level, CurrentFileName file, int line,
 
 Logger::LogImpl::~LogImpl()
 {
+    if(level_ < logLevel())
+        return ;
     stream_ << makeMsgTail();
     printf("%s\n", stream_.buffer().c_str());
     if( level_ == Logger::FATAL ){

@@ -36,5 +36,5 @@ target_link_libraries(
 
 
 # add_subdirectory(logging)
-
+add_subdirectory(./tests)
 
