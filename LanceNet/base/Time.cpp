@@ -1,5 +1,5 @@
 #include <LanceNet/base/Time.h>
-#include <LanceNet/base/num2cstr.h>
+#include <LanceNet/base/numberConvertingAlogo/integer2cstr.h>
 
 #include <chrono>
 #include <assert.h>

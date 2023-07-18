@@ -1,6 +1,7 @@
 
 #include <LanceNet/base/LogStream.h>
-#include <LanceNet/base/num2cstr.h>
+#include <LanceNet/base/numberConvertingAlogo/integer2cstr.h>
+#include <LanceNet/base/numberConvertingAlogo/grisu3.h>
 
 namespace LanceNet
 {
@@ -72,16 +73,24 @@ LogStream& LogStream::operator<<(unsigned long long data)
 
 LogStream& LogStream::operator<<(float data)
 {
-    char buf[32];
-    snprintf(buf, 32, "%f", data);
+    // char buf[32];
+    // snprintf(buf, 32, "%f", data);
+    // this->append(buf);
+    char buf[grisu3::DtoaMinBufferLength + 1];
+    char * p_end = grisu3::Dtoa(buf, data);
+    *(p_end) = '\0';
     this->append(buf);
     return *this;
 }
 
 LogStream& LogStream::operator<<(double data)
 {
-    char buf[32];
-    snprintf(buf, 32, "%lf", data);
+    // char buf[32];
+    // snprintf(buf, 32, "%lf", data);
+    // this->append(buf);
+    char buf[grisu3::DtoaMinBufferLength + 1];
+    char * p_end = grisu3::Dtoa(buf, data);
+    *(p_end) = '\0';
     this->append(buf);
     return *this;
 }

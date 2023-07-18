@@ -14,6 +14,10 @@ set(SRC_LIST
     ColorText.cpp
     LogStream.cpp
     Logging.cpp
+
+    numberConvertingAlogo/grisu3.cpp
+    numberConvertingAlogo/dragon4.cpp
+
 )
 
 add_library(

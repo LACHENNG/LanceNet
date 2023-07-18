@@ -1,4 +1,5 @@
-#include "LogStream.h"
+#include "../LogStream.h"
+#include <iostream>
 #include "limits.h"
 #include "iostream"
 #include <string>
@@ -34,8 +35,18 @@ int main()
     cout << (LOG << int_min) << endl;
     cout << (LOG << int_max) << endl;
 
-    float f = 1.1243;
+    float f = 1.1234;
     double d = 1.1234567;
+    printf("%g\n%g\n", f, d);
+    cout << (LOG << f) << endl;
+    cout << (LOG << d) << endl;
+    f = 0.12345;
+    d = 0.123456789;
+    cout << (LOG << f) << endl;
+    cout << (LOG << d) << endl;
+    cout << (LOG << (double)123456789.123456789 ) << endl;
+    f = 1.0;
+    d = 3.0;
     cout << (LOG << f) << endl;
     cout << (LOG << d) << endl;
 
