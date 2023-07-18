@@ -140,3 +140,6 @@ CTestTestfile.cmake
 LanceNet/net/TimerRelatedDeprecated/
 images/\347\220\206\350\247\243socket\344\270\255\347\232\204read\345\222\214write.jpg
 images/MemoryPool.png
+
+runclient.sh
+scptogx.sh
