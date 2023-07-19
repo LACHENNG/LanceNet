@@ -35,12 +35,17 @@ void TcpServer::start()
         std::bind(&TcpServer::onNewConnection, this, _1, _2));
 }
 
-void TcpServer::setNewConnectionCb(const OnNewConnectionCb &cb)
+void TcpServer::setOnNewConnectionCb(const OnNewConnectionCb &cb)
 {
     onNewConnCb_ = cb;
 }
 
-void TcpServer::setMessageCb(const OnMessageCb& cb)
+void TcpServer::setOnDissconnectionCb(const OnDissconnectionCb& cb)
+{
+    onDissconCb_ = cb;
+}
+
+void TcpServer::setOnMessageCb(const OnMessageCb& cb)
 {
     onMessageCb_ = cb;
 }
@@ -57,6 +62,7 @@ void TcpServer::onNewConnection(int conn_fd, const SA_IN* peer_addr)
 
     tcpConnPtr->setOnConnectionEstablishedCb(onNewConnCb_);
     tcpConnPtr->setOnMessageCb(onMessageCb_);
+    tcpConnPtr->setOnDisconnectCb(onDissconCb_);
     tcpConnPtr->setCloseCallback(std::bind(&TcpServer::removeConnection, this, _1));
     ioLoop->runInLoop(std::bind(&TcpConnection::connectionEstablished, tcpConnPtr));
     // tcpConnPtr->connectionEstablished();
@@ -66,7 +72,7 @@ void TcpServer::onNewConnection(int conn_fd, const SA_IN* peer_addr)
 void TcpServer::removeConnectionInLoop(const TcpConnectionPtr& conn)
 {
     owner_loop_->assertInEventLoopThread();
-    LOG_INFOC << "TcpServer::removeConnection [" << conn->name() << "]";
+
     auto nErased = tcp_connections_.erase(conn->name());
     assert(nErased != 0);
     // normally TcpConnectionPtr now is destoryed
@@ -79,7 +85,6 @@ void TcpServer::removeConnectionInLoop(const TcpConnectionPtr& conn)
     //owner_loop_->runInLoop(std::bind(&TcpConnection::destoryedConnection, conn.get(), conn));
     auto ioLoop = conn->getLoop();
     ioLoop->pendInLoop([conn](){
-        LOG_INFOC << "connection destoryed in Loop with connection name = " << "[" <<  conn->name() << "]";
         conn->destoryedConnection(conn);
     });
 

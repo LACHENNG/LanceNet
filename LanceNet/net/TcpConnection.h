@@ -27,11 +27,11 @@ class TcpConnection: public noncopyable,
 {
 public:
     using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
-    using OnNewConnectionEstablishedCb = std::function<void(TcpConnectionPtr connPtr, int conn_fd, const SA_IN* peer_addr)>;
+    using OnNewConnectionEstablishedCb = std::function<void(const TcpConnectionPtr& connPtr, int conn_fd, const SA_IN* peer_addr)>;
     using OnMessageCb = std::function<void(const TcpConnectionPtr&, Buffer* buf, TimeStamp ts)>;
     using OnWriteCompleteCb = std::function<void (const TcpConnectionPtr& connection)>;
    
-    using OnCloseConnectionCb = OnNewConnectionEstablishedCb;
+    using OnDisConnectionCb = OnNewConnectionEstablishedCb;
     using CloseCallback = std::function<void(TcpConnectionPtr conn_ptr)>;
 
     TcpConnection(EventLoop* loop, int connfd,
@@ -45,7 +45,7 @@ public:
     // set user callback
     // not thread safe  
     void setOnMessageCb(const OnMessageCb& cb);
-    void setOnDisconnectCb(const OnCloseConnectionCb& cb);
+    void setOnDisconnectCb(const OnDisConnectionCb& cb);
     void setOnWriteCompleteCb(const OnWriteCompleteCb& cb);
 
     // use internally by TcpServer or TcpClient
@@ -67,7 +67,7 @@ public:
     void shutdown();
 
     // runInRoop
-    void destoryedConnection(TcpConnectionPtr conn);
+    void destoryedConnection(const TcpConnectionPtr& conn);
     std::string name() { return name_ ;}
 
     EventLoop* getLoop() const{ return owner_loop_;}
@@ -100,7 +100,7 @@ private:
     // user registered callbacks
     OnNewConnectionEstablishedCb on_conn_established_cb_;
     OnMessageCb on_message_cb_;
-    OnCloseConnectionCb on_close_cb_;
+    OnDisConnectionCb on_disconnt_cb_;
     OnWriteCompleteCb on_writecomplete_cb_;
 
     // bind to TcpServer::removeConnection
@@ -112,6 +112,7 @@ private:
 
     StateE state_;
 };
+using TcpConnectionPtr = TcpConnection::TcpConnectionPtr;
 
 } // namespace net
 } // namespace LanceNet

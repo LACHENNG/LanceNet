@@ -32,7 +32,7 @@ int main()
     TcpServer daytime_server(gloop, 3456);
     daytime_server.start();
 
-    daytime_server.setNewConnectionCb(OnConnection);
+    daytime_server.setOnNewConnectionCb(OnConnection);
     gloop->StartLoop();
 
     return 0;

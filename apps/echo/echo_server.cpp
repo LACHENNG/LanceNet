@@ -43,8 +43,8 @@ int main()
     TcpServer echo_server(gloop, 3456);
     echo_server.start();
 
-    echo_server.setNewConnectionCb(OnConnection);
-    echo_server.setMessageCb(OnMessage);
+    echo_server.setOnNewConnectionCb(OnConnection);
+    echo_server.setOnMessageCb(OnMessage);
 
     gloop->StartLoop();
 

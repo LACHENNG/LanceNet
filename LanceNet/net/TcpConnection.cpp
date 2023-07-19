@@ -25,7 +25,7 @@ TcpConnection::TcpConnection(EventLoop* loop, int connfd, std::string name, cons
 
 TcpConnection::~TcpConnection()
 {
-    LOG_INFOC << "~TcpConnection() Fd = " << talkChannel_->fd();
+    // it`s ok to use default manner
 }
 
 void TcpConnection::setOnConnectionEstablishedCb(const OnNewConnectionEstablishedCb& cb)
@@ -38,9 +38,9 @@ void TcpConnection::setOnMessageCb(const OnMessageCb& cb)
     on_message_cb_ = cb;
 }
 
-void TcpConnection::setOnDisconnectCb(const OnCloseConnectionCb& cb)
+void TcpConnection::setOnDisconnectCb(const OnDisConnectionCb& cb)
 {
-    on_close_cb_ = cb;
+    on_disconnt_cb_ = cb;
 }
 
 void TcpConnection::setOnWriteCompleteCb(const OnWriteCompleteCb& cb)
@@ -149,12 +149,20 @@ void TcpConnection::handleRead(TimeStamp ts)
     }
 }
 
-void TcpConnection::destoryedConnection(TcpConnectionPtr conn)
+void TcpConnection::destoryedConnection(const TcpConnectionPtr& conn)
 {
     owner_loop_->assertInEventLoopThread();
     assert(state_ == kDisConnecting || state_ == kConnected);
-    owner_loop_->remove(conn->talkChannel_.get());
     setState(kDisConnected);
+    if(on_disconnt_cb_){
+        on_disconnt_cb_(shared_from_this(), talkChannel_->fd(), &peer_addr_);
+    }
+    // at this time the only possible reference to TcpConnection is this function itself or user client code 
+    // all reference in LanceNet lib is released, so if the use count not equal to 1 means client may still hold a copy to conn
+    if(conn.use_count() != 1){
+        LOG_WARNC << "TcpConnectionPtr should be destoryed but it is still referenced by your client code, do you forget to release it in your client code on dissconnection? (eg. on OnDissConnection UserCallback or so.)";
+    }
+    owner_loop_->remove(conn->talkChannel_.get());
 }
 
 // try to send the remain data in output buffer
@@ -191,7 +199,6 @@ void TcpConnection::handleClose()
 {
     owner_loop_->assertInEventLoopThread();
     assert(state_ == kConnected || state_ == kDisConnecting);
-    LOG_INFOC << "TcpConnection::handleClose()";
     talkChannel_->disableAll();
     assert(closeCallback_);
     closeCallback_(shared_from_this());
