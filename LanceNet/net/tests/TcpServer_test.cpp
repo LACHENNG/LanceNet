@@ -35,8 +35,8 @@ int main()
 {
     TcpServer tcpserver(&loop, 2345);
 
-    tcpserver.setMessageCb(OnMessage);
-    tcpserver.setNewConnectionCb(OnConnectionEstablished);
+    tcpserver.setOnMessageCb(OnMessage);
+    tcpserver.setOnNewConnectionCb(OnConnectionEstablished);
     tcpserver.start();
 
     loop.StartLoop();

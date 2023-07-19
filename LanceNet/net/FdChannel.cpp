@@ -31,7 +31,7 @@ FdChannel::~FdChannel()
 {
     assert(!eventHandling);
     Close(fd_);
-    LOG_INFOC << "FdChannel[fd=" << fd_ << "]" << " unregistered and closed";
+    LOG_DEBUGC << "~FdChannel() with fd[" << fd_ << "]" << "closed";
 }
 
 void FdChannel::handleEvents(TimeStamp ts)
@@ -56,19 +56,19 @@ void FdChannel::handleEvents(TimeStamp ts)
 
 void FdChannel::enableReading()
 {
-    LOG_INFOC << "enable reading for fd = " << fd();
+    LOG_DEBUGC << "enable reading for fd = " << fd();
     registInterestedEvent(kReadEvent);
 }
 
 void FdChannel::enableWriting()
 {
-    LOG_INFOC << "enable writing for fd = " << fd();
+    LOG_DEBUGC << "enable writing for fd = " << fd();
     registInterestedEvent(kWriteEvent);
 }
 
 void FdChannel::disableWriting()
 {
-    LOG_INFOC << "disable writing for fd = " << fd();
+    LOG_DEBUGC << "disable writing for fd = " << fd();
     unregisterEvent(kWriteEvent);
 }
 

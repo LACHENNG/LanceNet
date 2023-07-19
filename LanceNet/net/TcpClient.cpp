@@ -64,18 +64,21 @@ void TcpClient::OnRawConnection(int conn_sock)
         std::bind(&TcpClient::removeConnection, this, std::placeholders::_1));
 
     tcpConnectionPtr_->setOnMessageCb(messagecb_);
+    LOG_DEBUG << "last line in TcpClient::OnRawConnection conn use count before user on connection cb " << tcpConnectionPtr_.use_count();
     tcpConnectionPtr_->setOnConnectionEstablishedCb(connectioncb_);
     tcpConnectionPtr_->setOnDisconnectCb(disconnectcb_);
 
     tcpConnectionPtr_->connectionEstablished();
+    LOG_DEBUG << "last line in TcpClient::OnRawConnection conn use count " << tcpConnectionPtr_.use_count();
 }
 
 void TcpClient::removeConnection(const TcpConnectionPtr& conn)
 {
     // FIXME: unsafe
     auto ioLoop = conn->getLoop();
+    tcpConnectionPtr_.reset();
     ioLoop->pendInLoop([conn](){
-        LOG_INFOC << "connection destoryed in Loop with connection name = " << "[" <<  conn->name() << "]";
+        LOG_INFOC << "connection destoryed in Loop with connection name = " << "[" <<  conn->name() << "]" << " use count " << conn.use_count();
         conn->destoryedConnection(conn);
     });
 }
