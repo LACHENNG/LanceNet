@@ -31,10 +31,11 @@ public:
     // to support stream-style output eg.
     //  1. cout << ConsoleColor(..)
     //  2. LogStream << ConsoleColor(...)
-    std::string asString();
+    std::string asString() const;
 
 private:
-    net::Buffer buf_;
+    using Buffer = std::string;
+    Buffer buf_;
     TextColor color_;
 };
 
@@ -42,7 +43,7 @@ private:
 
 // stream-style output support
 template <typename ostream>
-ostream& operator<<(ostream& os, LanceNet::ColorText consoleColor)
+ostream& operator<<(ostream& os, const LanceNet::ColorText& consoleColor)
 {
     os << consoleColor.asString();
     return os;

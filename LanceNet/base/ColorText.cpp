@@ -6,38 +6,31 @@ namespace LanceNet
 
 const char* ColorText::colorCntlCode[ColorText::TextColor::NUM_COLORS] =
 {
-    // "\033[31m",
-    // "\033[32m",
-    // "\033[33m",
-    // "\033[0m",
-    "\033[91m",
-    "\033[92m",
-    "\033[93m",
-    "\033[0m",
+    "\033[91m", // RED
+    "\033[92m", // GREEN
+    "\033[93m", // YELLOW
+    "\033[0m",  // NONE
 };
 
 ColorText::ColorText(StringPiece str, TextColor color)
-  : buf_(64, 12),
-    color_(color)
+  : color_(color)
 {
-    buf_.append(str);
-
     // prepend color control code
     const char* cntl = ColorText::colorCntlCode[color];
-    buf_.preappend(cntl, strlen(cntl));
+    buf_.append(cntl, strlen(cntl));
+
+    buf_.append(str.data());
 
     // clear color
-    buf_.append("\033[0m", strlen("\033[0m")) ;
-    const char* non_color= ColorText::colorCntlCode[ColorText::NONE_COLOR];
-    buf_.append(non_color, strlen(non_color));
+    const char* noneColor = colorCntlCode[TextColor::NONE_COLOR];
+    buf_.append(noneColor, strlen(noneColor)) ;
 }
 
 
-std::string ColorText::asString()
+std::string ColorText::asString() const
 {
-    std::string str(buf_.retrieveAllAsString());
     // std::cout << "\033[0masString: " << str << std::endl;
-    return str;
+    return buf_;
 }
 
 
