@@ -29,7 +29,8 @@ private:
     std::vector<char> buf_;
     size_t readindex_;
     size_t writeindex_;
-
+    const int kinitSize_;
+    const int kprependSize_;
     constexpr static const char* const kCRLF = "\r\n" ;
 public:
     // default buffer size
@@ -43,6 +44,7 @@ public:
     size_t readableBytes() const;
     size_t writeableBytes() const;
     size_t prependableBytes() const;
+    size_t size() const;
 
     // peek data(does not affect internal state)
     const char* peek() const;

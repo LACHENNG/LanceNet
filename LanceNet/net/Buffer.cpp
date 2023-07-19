@@ -21,7 +21,9 @@ __thread char tl_extra_buf[kextra_buf_len];
 Buffer::Buffer(int initSz, int prependSz)
   : buf_(initSz + prependSz),
     readindex_(prependSz),
-    writeindex_(prependSz)
+    writeindex_(prependSz),
+    kinitSize_(initSz),
+    kprependSize_(prependSz)
 {
 }
 
@@ -40,6 +42,10 @@ size_t Buffer::prependableBytes() const
     return readindex_;
 }
 
+size_t Buffer::size() const
+{
+    return buf_.size();
+}
 ////////////////////////////////////////
 /// peeks
 ////////////////////////////////////////
@@ -95,7 +101,7 @@ void Buffer::retrieve(size_t size)
 void Buffer::retrieveAll()
 {
     // reset watermark
-    readindex_ = writeindex_ = kDefaultPrependSize;
+    retrieve(readableBytes());
 }
 
 void Buffer::retrieveInt8()
@@ -122,8 +128,6 @@ std::string Buffer::retrieveAllAsString()
 {
     std::string rv = std::string(buf_.begin() + readindex_, buf_.begin() + writeindex_);
     retrieve(readableBytes());
-
-    readindex_ = writeindex_ = kDefaultPrependSize;
     return rv;
 }
 
@@ -197,12 +201,12 @@ ssize_t Buffer::readFd(int fd)
     }
     else // has data read into extra buffer
     {
-        int n = nBytesRead - iov1.iov_len;
-        assert(n > 0 && n < static_cast<ssize_t>(iov2.iov_len));
-        append(iov2.iov_base, n);
+        hasWritten(iov1.iov_len);
+        int extra_len = nBytesRead - iov1.iov_len;
+        assert(extra_len > 0 && extra_len <= static_cast<ssize_t>(iov2.iov_len));
+        append(iov2.iov_base, extra_len);
     }
     return nBytesRead;
-    //readv(, const struct iovec *iov, int iovcnt);
 }
 ////////////////////////////////////////////////////////
 // append
@@ -227,11 +231,12 @@ void Buffer::ensureWriteableSpace(size_t len)
     }
 
     // move data to the front, make space inside buffer
-    if(writeableBytes() + prependableBytes() >= len + kDefaultPrependSize){
+    if(writeableBytes() + prependableBytes() >= len + kprependSize_){
         size_t readable = readableBytes();
-
-        readindex_ = kDefaultPrependSize;
+        memmove(begin() + kprependSize_, beginRead(), readableBytes());
+        readindex_ = kprependSize_;
         writeindex_ = readindex_ + readable;
+
     }
     else {
         buf_.resize( writeindex_ + len);
@@ -245,13 +250,13 @@ void Buffer::ensureWriteableSpace(size_t len)
 //     size_t prependable = prependableBytes();
 //     // if a internal buffer movement can meet the required space, move and avoid direct append
 //     if(writeable < len &&
-//        writeable + prependable >= len + kDefaultPrependSize)
+//        writeable + prependable >= len + kprependSize_)
 //     {
 //         assert(readindex_ <= writeindex_ && writeindex_ <= buf_.size());
 //         // step 1: move the buffer to the begining of buf_
 //         memmove(&buf_[kDefaultInitSize], beginRead(), readableBytes());
 //         // step 2: update watermark
-//         int offset = readindex_ - kDefaultPrependSize;
+//         int offset = readindex_ - kprependSize_;
 //         readindex_ -= offset;
 //         writeindex_ -= offset;
 //         // step 3: append data
@@ -401,6 +406,9 @@ const char* Buffer::beginWrite() const
 void Buffer::hasRead(size_t sz)
 {
     readindex_ += sz;
+    if(readindex_ == writeindex_){
+        readindex_ = writeindex_ = kprependSize_;
+    }
 }
 void Buffer::hasWritten(size_t sz)
 {

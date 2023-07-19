@@ -168,7 +168,7 @@ BOOST_AUTO_TEST_CASE(testBufferReadInt)
   }
 
   BOOST_CHECK_EQUAL(buf.readableBytes(), Buffer::kDefaultInitSize - 5);
-  BOOST_CHECK_EQUAL(buf.prependableBytes(), 4 + Buffer::kDefaultPrependSize);
+  BOOST_CHECK_EQUAL(buf.prependableBytes(), Buffer::kDefaultPrependSize);
 
   // this will cause to internal buffer to the front, to make space internally
   buf.append("12345", 5);
@@ -226,4 +226,57 @@ BOOST_AUTO_TEST_CASE(testMove)
   const void* inner = buf.peek();
   // printf("Buffer at %p, inner %p\n", &buf, inner);
   output(std::move(buf), inner);
+}
+
+BOOST_AUTO_TEST_CASE(testIntervalMoveToMakeSapce)
+{
+  const int initsize = 16;
+  const int prependsize = 8;
+  Buffer buf(initsize, prependsize);
+ 
+  BOOST_CHECK_EQUAL(buf.size(), initsize + prependsize);
+  buf.append("12345678", 8);
+  BOOST_CHECK_EQUAL(buf.prependableBytes(), Buffer::kDefaultPrependSize);
+  BOOST_CHECK_EQUAL(buf.readableBytes(), 8);
+  BOOST_CHECK_EQUAL(buf.writeableBytes(), 8);
+  buf.retrieveAll();
+  BOOST_CHECK_EQUAL(buf.size(), initsize + prependsize);
+  BOOST_CHECK_EQUAL(buf.prependableBytes(), Buffer::kDefaultPrependSize);
+  BOOST_CHECK_EQUAL(buf.writeableBytes(), initsize);
+
+    
+  buf.append("12345678", 8);
+  buf.retrieve(7);
+  BOOST_CHECK_EQUAL(buf.size(), initsize + prependsize);
+  BOOST_CHECK_EQUAL(buf.prependableBytes(), 7 + Buffer::kDefaultPrependSize);
+  BOOST_CHECK_EQUAL(buf.writeableBytes(), 8);
+  BOOST_CHECK_EQUAL(buf.peekInt8(), '8');
+  // cause a internal memery move to front to make space 
+  buf.append("123456789", 9);
+    
+  BOOST_CHECK_EQUAL(buf.size(), initsize + prependsize);
+  BOOST_CHECK_EQUAL(buf.prependableBytes(), Buffer::kDefaultPrependSize);
+  BOOST_CHECK_EQUAL(buf.writeableBytes(), 6);
+    
+  BOOST_CHECK_EQUAL(buf.retrieveAllAsString(), "8123456789");
+   
+  BOOST_CHECK_EQUAL(buf.size(), initsize + prependsize);
+  BOOST_CHECK_EQUAL(buf.prependableBytes(), Buffer::kDefaultPrependSize);
+  BOOST_CHECK_EQUAL(buf.writeableBytes(), initsize);
+
+}
+
+BOOST_AUTO_TEST_CASE(testGrowAndPrepend)
+{
+    Buffer buf(8, 16);
+    int msg_len = 16;
+    buf.preappend(msg_len);
+    buf.append("0123456789123456");
+
+    BOOST_CHECK_EQUAL(buf.size(), 8 + 16);
+    BOOST_CHECK_EQUAL(buf.prependableBytes(), 8 - sizeof(int));
+    BOOST_CHECK_EQUAL(buf.writeableBytes(), 0);
+    
+    BOOST_CHECK_EQUAL(buf.peekInt32(), msg_len);
+
 }
