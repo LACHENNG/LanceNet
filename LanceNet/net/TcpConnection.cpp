@@ -5,6 +5,7 @@
 #include <LanceNet/base/Logging.h>
 #include <memory>
 #include <assert.h>
+#include <netdb.h>
 
 namespace LanceNet
 {
@@ -16,11 +17,11 @@ TcpConnection::TcpConnection(EventLoop* loop, int connfd, std::string name, cons
     talkChannel_(std::make_unique<FdChannel>(loop, connfd)),
     name_(name),
     peer_addr_(*peer_addr),
-    state_(kConnecting)
+    state_(kConnecting),
+    talkChannelfd_(connfd)
 {
     talkChannel_->setReadCallback(std::bind(&TcpConnection::handleRead, this, std::placeholders::_1));
     talkChannel_->setWriteCallback(std::bind(&TcpConnection::handleWrite, this));
-    talkChannel_->enableReading();
 }
 
 TcpConnection::~TcpConnection()
@@ -54,10 +55,12 @@ void TcpConnection::setCloseCallback(const CloseCallback& cb)
 
 void TcpConnection::connectionEstablished()
 {
+    owner_loop_->assertInEventLoopThread();
     setState(kConnected);
     if(on_conn_established_cb_){
         on_conn_established_cb_(shared_from_this(), talkChannel_->fd(), &peer_addr_);
     }
+    talkChannel_->enableReading();
 }
 
 void TcpConnection::sendInLoop(const void* message, size_t len)
@@ -71,7 +74,7 @@ void TcpConnection::sendInLoop(const void* message, size_t len)
     int nWrote = 0;
     if(outputBuffer_.readableBytes() == 0 )
     {
-        int n = Write(talkChannel_->fd(), message, len);
+        int n = Write(fdOfTalkChannel(), message, len);
         nWrote += n;
     }
     // FIXME: this may have the problem that the client receive data too slow
@@ -111,11 +114,37 @@ void TcpConnection::send(const void* message, size_t len)
     }
 }
 
-void TcpConnection::send(const std::string& message)
+void TcpConnection::send(const std::string& msg)
 {
     if(state_ == kDisConnecting)
         return;
-    send(message.data(), message.size());
+    if(owner_loop_->isInEventLoopThread()){
+        sendInLoop(msg.data(), msg.size());
+    }else{
+        std::string str(msg);
+        owner_loop_->pendInLoop([p=shared_from_this(), message = std::move(str)](){
+            p->sendInLoop(message.data(), message.size());
+        });
+    }
+}
+
+void TcpConnection::send(Buffer* buf)
+{
+    if(state_ == kDisConnecting)
+        return;
+
+    if(owner_loop_->isInEventLoopThread())
+    {
+        sendInLoop(buf->peek(), buf->readableBytes());
+        buf->retrieveAll();
+    }
+    else{
+        Buffer data(buf->initSize(), buf->prependSize());
+        data.swap(*buf);
+        owner_loop_->pendInLoop([p=shared_from_this(), mybuf = std::move(data)](){
+            p->sendInLoop(mybuf.peek(), mybuf.size());
+        });
+    }
 }
 
 void TcpConnection::shutdown()
@@ -135,7 +164,7 @@ void TcpConnection::handleRead(TimeStamp ts)
 {
     owner_loop_->assertInEventLoopThread();
 
-    int nread = inputBuffer_.readFd(talkChannel_->fd());
+    int nread = inputBuffer_.readFdFast(fdOfTalkChannel());
     if(nread == 0){
         handleClose();
     }else if(nread > 0){
@@ -175,7 +204,7 @@ void TcpConnection::handleWrite()
         return ;
     }
     int nreadable = outputBuffer_.readableBytes();
-    int nWrote = ::Write(talkChannel_->fd(),
+    int nWrote = ::Write(fdOfTalkChannel(),
                         outputBuffer_.peek(),
                         outputBuffer_.readableBytes());
     outputBuffer_.retrieve(nWrote);
@@ -207,6 +236,16 @@ void TcpConnection::handleClose()
 void TcpConnection::handleError()
 {
     LOG_WARNC << "TcpConnection::handleError() connection name [Fd = " << talkChannel_->fd() << "]" << strerror(errno);
+}
+
+std::string TcpConnection::peerIpPort() const
+{
+    char ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &peer_addr_.sin_addr, ip, sizeof(ip));
+    int port = ntohs(peer_addr_.sin_port);
+    std::string ipPort = std::string(ip) + ":" + std::to_string(port);
+    return ipPort;
+
 }
 
 } // namespace net

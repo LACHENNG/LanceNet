@@ -16,13 +16,14 @@ namespace net
 {
 using namespace std::placeholders;
 
-TcpServer::TcpServer(EventLoop* loop, int listen_port)
-  : owner_loop_(loop),
+TcpServer::TcpServer(EventLoop* loop, int listen_port, int numThreads)
+  : main_loop_(loop),
     acceptor_(std::make_unique<Acceptor>(loop, listen_port)),
     name("TcpConnection "),
     totalCreatedTcpConnections_(0),
-    eventloopPool_(std::make_unique<EventLoopPool>(owner_loop_))
+    eventloopPool_(std::make_unique<EventLoopPool>(loop))
 {
+    eventloopPool_->setThreadNum(numThreads);
 }
 
 TcpServer::~TcpServer()
@@ -31,8 +32,10 @@ TcpServer::~TcpServer()
 
 void TcpServer::start()
 {
+    eventloopPool_->start();
     acceptor_->setOnConnectionCallback(
         std::bind(&TcpServer::onNewConnection, this, _1, _2));
+    acceptor_->startListen();
 }
 
 void TcpServer::setOnNewConnectionCb(const OnNewConnectionCb &cb)
@@ -52,11 +55,13 @@ void TcpServer::setOnMessageCb(const OnMessageCb& cb)
 
 void TcpServer::onNewConnection(int conn_fd, const SA_IN* peer_addr)
 {
-    owner_loop_->assertInEventLoopThread();
+    mainLoop()->assertInEventLoopThread();
     ++totalCreatedTcpConnections_;
 
     auto conn_name = name + itoa_s(totalCreatedTcpConnections_);
     auto ioLoop = eventloopPool_->getNextLoop();
+
+    LOG_DEBUGC << "New tcpconnection is assigned to ioLoop = " << ioLoop;
     auto tcpConnPtr = std::make_shared<TcpConnection>(ioLoop,
             conn_fd, conn_name, peer_addr);
 
@@ -71,7 +76,7 @@ void TcpServer::onNewConnection(int conn_fd, const SA_IN* peer_addr)
 
 void TcpServer::removeConnectionInLoop(const TcpConnectionPtr& conn)
 {
-    owner_loop_->assertInEventLoopThread();
+    mainLoop()->assertInEventLoopThread();
 
     auto nErased = tcp_connections_.erase(conn->name());
     assert(nErased != 0);
@@ -87,15 +92,17 @@ void TcpServer::removeConnectionInLoop(const TcpConnectionPtr& conn)
     ioLoop->pendInLoop([conn](){
         conn->destoryedConnection(conn);
     });
-
 }
 
 void TcpServer::removeConnection(const TcpConnectionPtr& conn)
 {
-    // FIXME: unsafe
-    // auto ioLoop = conn->getLoop();
-    // ioLoop->runInLoop(std::bind(&TcpServer::removeConnectionInLoop, this, conn));
-    removeConnectionInLoop(conn);
+    // FIXME: unsafe use of this
+    // but TcpServer is usually have the same life time
+    // as the program itself, so this may will not cause
+    // big problem
+    mainLoop()->runInLoop([thisPtr = this, conn](){
+        thisPtr->removeConnectionInLoop(conn);
+    });
 }
 
 } // namespace net

@@ -20,6 +20,8 @@ public:
     void setThreadNum(int numThreads);
     void start();
     EventLoop* getNextLoop();
+    EventLoop* getMainLoop() const { return mainLoop_;}
+
 private:
     bool started_;
     int threadNum_;

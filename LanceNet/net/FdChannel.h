@@ -29,30 +29,37 @@ public:
     // invoke user callbacks
     void handleEvents(TimeStamp ts);
 
-    void setReadCallback(EventCallback cb);
-    void setWriteCallback(EventCallback cb);
+    void setReadCallback(const EventCallback& cb) { onReadCb_ = cb; }
+    void setWriteCallback(const EventCallback& cb) { onWriteCb_ = cb; }
 
     // getter
-    int fd();
-    short events();
-    short revents();
-    int index(); // the index of fd_ in poolfd
+    int fd() const { return fd_; }
+    short events() const { return events_; }
+    short revents() const { return revents_; }
+    int index() const { return index_; } // the index of fd_ in poolfd
 
-    bool isWriteEnabled();
-    bool isReadEnabled();
+    bool isWriteEnabled(){ return static_cast<bool>(events_ & kWriteEvent); }
+    bool isReadEnabled() { return static_cast<bool>(events_ & kReadEvent); }
+
+    bool isNoneEvent() { return events_ == kNoneEvent; }
 
     // setter
-    void events(short newevents); // set events like in pollfd.events
-    void revents(short newEvent);// set revents like in pollfd.revent
-    void index(int newIndex);    // set index in pollfd
+    // set events that interested in
+    void events(short newInterestedEvent) { events_ = newInterestedEvent; }
+    // set return events actually happend
+    void revents(short revents) { revents_ = revents; }
+    // set index in pollfd
+    void index(int newIndex) { index_ = newIndex; }
 
-    // let the interested events take effect.
-    // (change interested events)
-    void enableReading();
-    void enableWriting();
-    void disableWriting();
+    // cares on readable events
+    void enableReading() { registInterestedEvent(kReadEvent); }
+    // care on writeable events 
+    void enableWriting() { registInterestedEvent(kWriteEvent); }
+
+    // not care on writeable events 
+    void disableWriting() { unregisterEvent(kWriteEvent); }
+    // not care on any events
     void disableAll();
-    bool isNoneEvent();
 
 private:
     // change interested events in fd

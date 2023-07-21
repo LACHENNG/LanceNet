@@ -24,8 +24,10 @@ EventLoopThread::~EventLoopThread()
 
 void EventLoopThread::createEventLoopAndLaunch()
 {
-    LOG_INFOC << "create new eventloop and launched at thread: " << ThisThread::Gettid();
-    EventLoopPtr_.reset(new EventLoop());
+    EventLoop* p = new EventLoop();
+
+    LOG_DEBUGC << "-----------EventLoop p =  " << p;
+    EventLoopPtr_.reset(p);
     // notify that eventloop is create and ready
     latch_.countdown();
 

@@ -1,4 +1,5 @@
 #include "LanceNet/net/EventLoopPool.h"
+#include "LanceNet/base/Logging.h"
 #include "LanceNet/net/EventLoopThread.h"
 #include "LanceNet/net/EventLoop.h"
 
@@ -41,13 +42,17 @@ void EventLoopPool::start()
 
 EventLoop* EventLoopPool::getNextLoop()
 {
+    assert(started_);
     if(threadNum_ == 0)
     {
         return mainLoop_;
     }
     // round rabin
     auto nextLoop = loops_[next_];
-    next_ = (next_ + 1) % threadNum_;
+    next_ = next_ + 1;
+    if(next_ >= threadNum_){
+        next_ = 0;
+    }
     return nextLoop;
 }
 

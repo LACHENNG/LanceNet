@@ -54,34 +54,12 @@ void FdChannel::handleEvents(TimeStamp ts)
     eventHandling = false;
 }
 
-void FdChannel::enableReading()
-{
-    LOG_DEBUGC << "enable reading for fd = " << fd();
-    registInterestedEvent(kReadEvent);
-}
-
-void FdChannel::enableWriting()
-{
-    LOG_DEBUGC << "enable writing for fd = " << fd();
-    registInterestedEvent(kWriteEvent);
-}
-
-void FdChannel::disableWriting()
-{
-    LOG_DEBUGC << "disable writing for fd = " << fd();
-    unregisterEvent(kWriteEvent);
-}
 
 void FdChannel::disableAll()
 {
     // WRONG: only set event = 0 can not mask all event like POLLERR
     events_ = 0;
     owner_loop_->disableAllEvent(this);
-}
-
-bool FdChannel::isNoneEvent()
-{
-    return events_ == kNoneEvent;
 }
 
 void FdChannel::registInterestedEvent(short event)
@@ -99,64 +77,6 @@ void FdChannel::unregisterEvent(short event)
 void FdChannel::update()
 {
     owner_loop_->update(this);
-}
-
-
-void FdChannel::setReadCallback(EventCallback cb)
-{
-    onReadCb_ = cb;
-}
-
-void FdChannel::setWriteCallback(EventCallback cb)
-{
-    onWriteCb_ = cb;
-}
-
-
-// getter
-int FdChannel::fd()
-{
-    return fd_;
-}
-
-short FdChannel::events()
-{
-    return events_;
-}
-
-short FdChannel::revents()
-{
-    return revents_;
-}
-
-int FdChannel::index()
-{
-    return index_;
-}
-
-bool FdChannel::isWriteEnabled()
-{
-    return static_cast<bool>(events_ & kWriteEvent);
-}
-
-bool FdChannel::isReadEnabled()
-{
-    return static_cast<bool>(events_ & kReadEvent);
-}
-// setter
-void FdChannel::events(short newEvents)
-{
-    events_ = newEvents;
-}
-
-void FdChannel::revents(short revents)
-{
-    revents_ = revents;
-}
-
-void FdChannel::index(int newIndex)
-{
-    index_ = newIndex;
 }
 
 } // namespace net

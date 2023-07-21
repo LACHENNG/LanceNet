@@ -26,11 +26,12 @@ class TcpServer: noncopyable
 {
 public:
     using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
-    using OnNewConnectionCb = std::function<void(TcpConnectionPtr tcpConnPtr, int conn_fd, const SA_IN* peer_addr)>;
+    using OnNewConnectionCb = std::function<void(const TcpConnectionPtr& tcpConnPtr, int conn_fd, const SA_IN* peer_addr)>;
     using OnDissconnectionCb = OnNewConnectionCb;
     using OnMessageCb = std::function<void(const TcpConnectionPtr&, Buffer* buf, TimeStamp ts)>;
-
-    TcpServer(EventLoop* loop, int listen_port);
+    
+    // numThreads = 0 means use main thread as IO thread
+    TcpServer(EventLoop* loop, int listen_port, int numThreads = 0);
     ~TcpServer(); // force out-line dtor, for unique_ptr members
 
     // set new conntion callback
@@ -43,12 +44,14 @@ public:
 
     void start();
 
+    EventLoop* mainLoop() const { return main_loop_;}
+
 private:
     // Accepting new connections
     // not thread save
     // but in loop
     void onNewConnection(int conn_fd, const SA_IN* peer_addr);
-    EventLoop* owner_loop_;
+    EventLoop* main_loop_;
     std::unique_ptr<Acceptor> acceptor_; // avoid revealing Acceptor
 
     // identifier for each new TcpConnection
@@ -56,9 +59,10 @@ private:
     int totalCreatedTcpConnections_;  // in loop
 
     // not thread safe
-    // but in loop
+    // but in main loop
     void removeConnectionInLoop(const TcpConnectionPtr& conn);
-    // thread safe
+    // not thread safe
+    // but in main loop
     void removeConnection(const TcpConnectionPtr& conn);
 
     OnNewConnectionCb onNewConnCb_;

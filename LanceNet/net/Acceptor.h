@@ -31,16 +31,18 @@ public:
     Acceptor(EventLoop* ownerLoop, int listenPort);
 
     void setOnConnectionCallback(const OnConnectCallback& onConnetCb);
-
+    bool listening() const {return listening_;}
+    bool startListen();
 private:
     void handleRead();
     
+    EventLoop* owner_loop_;
     int listen_port_;
     int listen_fd_;
     std::unique_ptr<FdChannel> listenChannel;
     OnConnectCallback onConnectCb_;
+    bool listening_;
 };
-
 } // namespace net
 } // namespace LanceNet
 
