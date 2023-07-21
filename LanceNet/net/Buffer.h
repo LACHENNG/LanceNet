@@ -5,8 +5,10 @@
 #include "LanceNet/base/copyable.h"
 #include <LanceNet/base/StringPiece.h>
 
+#include <sys/types.h>
 #include <vector>
 #include <string>
+#include <cassert>
 
 namespace LanceNet
 {
@@ -31,7 +33,9 @@ private:
     size_t writeindex_;
     const int kinitSize_;
     const int kprependSize_;
+    const int kdefaultInitSize_;
     constexpr static const char* const kCRLF = "\r\n" ;
+
 public:
     // default buffer size
     static const int kDefaultInitSize = 1024;
@@ -41,52 +45,90 @@ public:
     Buffer(int initSize = kDefaultInitSize, int preappendSize = kDefaultPrependSize);
 
     // observal
-    size_t readableBytes() const;
-    size_t writeableBytes() const;
-    size_t prependableBytes() const;
-    size_t size() const;
+    size_t readableBytes() const { return writeindex_ - readindex_; }
+    size_t writeableBytes() const { return buf_.size() - writeindex_; }
+    size_t prependableBytes() const { return readindex_; }
+    size_t size() const { return buf_.size(); }
+    size_t prependSize() const { return kprependSize_; }
+    // get init size of the buffer
+    size_t initSize() const { return kinitSize_; }
 
-    // peek data(does not affect internal state)
-    const char* peek() const;
-    int8_t peekInt8() const;
-    int16_t peekInt16() const;
-    int32_t peekInt32() const;
-    int64_t peekInt64() const;
-
+    // data still remains after peek
+    const char* peek() const {
+        assert(readindex_ < buf_.size() && readindex_ <= writeindex_);
+        return beginRead();
+    }
+    // data still remains after peek
+    int8_t peekInt8() const {
+        assert(readableBytes() >= sizeof(int8_t));
+        return *reinterpret_cast<const int8_t*>(peek());
+    }
+    // data still remains after peek
+    int16_t peekInt16() const {
+        assert(readableBytes() >= sizeof(int16_t));
+        return *reinterpret_cast<const int16_t*>(peek());
+    }
+    // data still remains after peek
+    int32_t peekInt32() const {
+        assert(readableBytes() >= sizeof(int32_t));
+        return *reinterpret_cast<const int32_t*>(peek());
+    }
+    // data still remains after peek
+    int64_t peekInt64() const {
+        assert(readableBytes() >= sizeof(int64_t));
+        return *reinterpret_cast<const int64_t*>(peek());
+    }
 
     // fetch `sz` bytes from the buffer
     // return is set to void to avoid misuse string str(retrieve(readableBytes()), readableBytes())
-    void retrieve(size_t sz);
-    void retrieveAll();
-    void retrieveInt8();
-    void retrieveInt16();
-    void retrieveInt32();
-    void retrieveInt64();
+    // take out byte from buffer
+    void retrieve(size_t size) { assert(size >= 0 && size <= readableBytes()); hasRead(size); }
+    // take out byte from buffer
+    void retrieveAll() { retrieve(readableBytes()); }
+    // take out byte from buffer
+    void retrieveInt8() { retrieve(sizeof(int8_t)); }
+    // take out byte from buffer
+    void retrieveInt16() { retrieve(sizeof(int16_t)); }
+    // take out byte from buffer
+    void retrieveInt32() { retrieve(sizeof(int32_t)); }
+    // take out byte from buffer
+    void retrieveInt64() { retrieve(sizeof(int64_t)); }
+
     std::string retrieveAllAsString();
     std::string retrieveAsString(size_t len);
 
     // read from network endian
     int8_t readInt8();
+    // read from network endian
     int16_t readInt16();
+    // read from network endian
     int32_t readInt32();
+    // read from network endian
     int64_t readInt64();
 
     // read data from socket
     // optimized by "scatter input"
+    // Deprecated
     ssize_t readFd(int fd);
+    // read data from socket
+    // optimized by "scatter input"
+    // optimized version of readFd that use c array
+    ssize_t readFdFast(int fd);
 
-    void append(const void* data, size_t len);
     void append(const char* data, size_t len);
-    void append(const StringPiece& str);
-    void appendInt8(int8_t);
-    void appendInt16(int16_t);
-    void appendInt32(int32_t);
+
+    void append(const void* src, size_t len) { append(static_cast<const char*>(src), len); }
+    void append(const StringPiece& str) { this->append(str.data(), str.size()); }
+    void appendInt8(int8_t num) { append(&num, sizeof(int8_t)); }
+    void appendInt16(int16_t num) { append(&num, sizeof(int16_t)); }
+    void appendInt32(int32_t num) { append(&num, sizeof(int32_t)); }
 
     void preappend(const void*, size_t sz);
-    void preappend(int64_t);
-    void preappend(int32_t);
-    void preappend(int16_t);
-    void preappend(int8_t);
+
+    void preappend(int64_t num) { preappend(&num, sizeof(int64_t)); }
+    void preappend(int32_t num) { preappend(&num, sizeof(int32_t)); }
+    void preappend(int16_t num) { preappend(&num, sizeof(int16_t)); }
+    void preappend(int8_t num) { preappend(&num, sizeof(int8_t)); }
 
     // util to deal with text
     const char* findEOL() const; // \n
@@ -95,20 +137,25 @@ public:
     const char* findCRLF(const char* start) const;
     void swap(Buffer& rhs);
 
-    StringPiece toStringPiece() const;
+    StringPiece toStringPiece() const { return StringPiece(beginRead(), readableBytes()); }
 
 private:
-    // int readFd(int);
-    char* begin();
-    const char* begin() const;
-    char* beginRead();
-    const char* beginRead() const;
-    char* beginWrite();
-    const char* beginWrite() const;
-    // used to modify
-    void hasRead(size_t);
-    void hasWritten(size_t);
-    void unread(size_t);
+    // the begining of internal mem buffer
+    char* begin() { return &(*buf_.begin()); }
+    const char* begin() const { return &(*buf_.begin()); }
+    char* beginRead() { return begin() + readindex_; }
+    const char* beginRead() const { return begin() + readindex_; }
+    char* beginWrite() { return begin() + writeindex_; }
+    const char* beginWrite() const { return begin() + writeindex_; }
+    // adjust read watermark
+    void hasRead(size_t sz) { 
+        readindex_ += sz;
+        if(readindex_ == writeindex_){ readindex_ = writeindex_ = kprependSize_; }
+    }
+    // adjust write watermark
+    void hasWritten(size_t sz) { writeindex_ += sz; assert(writeindex_ < size()); }
+    // unread watermark
+    void unread(size_t sz) { readindex_ -= sz; assert(readindex_ >= 0); }
 
     void ensureWriteableSpace(size_t len);
 };

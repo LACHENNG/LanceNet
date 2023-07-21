@@ -23,106 +23,14 @@ Buffer::Buffer(int initSz, int prependSz)
     readindex_(prependSz),
     writeindex_(prependSz),
     kinitSize_(initSz),
-    kprependSize_(prependSz)
+    kprependSize_(prependSz),
+    kdefaultInitSize_(initSz)
 {
-}
-
-size_t Buffer::readableBytes() const
-{
-    return writeindex_ - readindex_;
-}
-
-size_t Buffer::writeableBytes() const
-{
-    return buf_.size() - writeindex_;
-}
-
-size_t Buffer::prependableBytes() const
-{
-    return readindex_;
-}
-
-size_t Buffer::size() const
-{
-    return buf_.size();
-}
-////////////////////////////////////////
-/// peeks
-////////////////////////////////////////
-const char* Buffer::peek() const
-{
-    assert(readindex_ < buf_.size() && readindex_ <= writeindex_);
-    return beginRead();
-}
-
-int8_t Buffer::peekInt8() const
-{
-    assert(readableBytes() >= sizeof(int8_t));
-    const int8_t* p = reinterpret_cast<const int8_t*>(peek());
-    return *p;
-}
-
-int16_t Buffer::peekInt16() const
-{
-    assert(readableBytes() >= sizeof(int16_t));
-    const int16_t* pint = reinterpret_cast<const int16_t*>(peek());
-    return *pint;
-}
-
-int32_t Buffer::peekInt32() const
-{
-    assert(readableBytes() >= sizeof(int32_t));
-    const int32_t* pint = reinterpret_cast<const int32_t*>(peek());
-    return *pint;
-}
-
-int64_t Buffer::peekInt64() const
-{
-    assert(readableBytes() >= sizeof(int64_t));
-    const int64_t* pint = reinterpret_cast<const int64_t*>(peek());
-    return *pint;
 }
 
 /////////////////////////////////////////////////////////
 /// retrieve
 /////////////////////////////////////////////////////////
-void Buffer::retrieve(size_t size)
-{
-    assert(size >= 0 && size <= readableBytes());
-    hasRead(size);
-
-    // reset to begin (done at `append()`)
-    // if(readindex_ == writeindex_)
-    // {
-    //     readindex_ = writeindex_ = kDefaultPrependSize;
-    // }
-}
-
-void Buffer::retrieveAll()
-{
-    // reset watermark
-    retrieve(readableBytes());
-}
-
-void Buffer::retrieveInt8()
-{
-    retrieve(sizeof(int8_t));
-}
-
-void Buffer::retrieveInt16()
-{
-    retrieve(sizeof(int16_t));
-}
-
-void Buffer::retrieveInt32()
-{
-    retrieve(sizeof(int32_t));
-}
-
-void Buffer::retrieveInt64()
-{
-    retrieve(sizeof(int64_t));
-}
 
 std::string Buffer::retrieveAllAsString()
 {
@@ -180,6 +88,7 @@ int64_t Buffer::readInt64()
 }
 
 // read data from fd to internal buffer
+// Deprecated
 ssize_t Buffer::readFd(int fd)
 {
     std::vector<struct iovec> iovs(2, {nullptr, 0});
@@ -208,14 +117,36 @@ ssize_t Buffer::readFd(int fd)
     }
     return nBytesRead;
 }
+
+ssize_t Buffer::readFdFast(int fd)
+{
+    struct iovec iovs[2];
+    // static std::vector<struct iovec> iovs(2, {nullptr, 0});
+    iovs[0].iov_base = beginWrite();
+    iovs[0].iov_len = writeableBytes();
+    iovs[1].iov_base = tl_extra_buf;
+    iovs[1].iov_len = kextra_buf_len;
+
+    auto nBytesRead = Readv(fd, iovs, sizeof(iovs)/sizeof(*iovs));
+
+    // if no data read into extra buffer
+    if(nBytesRead <= static_cast<ssize_t>(iovs[0].iov_len))
+    {
+        hasWritten(nBytesRead);
+    }
+    else // has data read into extra buffer
+    {
+        hasWritten(iovs[0].iov_len);
+        int extra_len = nBytesRead - iovs[0].iov_len;
+        assert(extra_len > 0 && extra_len <= static_cast<ssize_t>(iovs[1].iov_len));
+        append(iovs[1].iov_base, extra_len);
+    }
+    return nBytesRead;
+
+}
 ////////////////////////////////////////////////////////
 // append
 ////////////////////////////////////////////////////////
-
-void Buffer::append(const void* src, size_t len)
-{
-    append(static_cast<const char*>(src), len);
-}
 
 void Buffer::append(const char* src, size_t len)
 {
@@ -275,52 +206,12 @@ void Buffer::ensureWriteableSpace(size_t len)
 //         writeindex_ += len;
 // }
 
-void Buffer::append(const StringPiece& str)
-{
-    const char* cstr = str.data();
-    this->append(cstr, str.size());
-}
-
-void Buffer::appendInt8(int8_t num)
-{
-    append(&num, sizeof(int8_t));
-}
-
-void Buffer::appendInt16(int16_t num)
-{
-    append(&num, sizeof(int16_t));
-}
-
-void Buffer::appendInt32(int32_t num)
-{
-    append(&num, sizeof(int32_t));
-}
-
 void Buffer::preappend(const void * src, size_t len)
 {
     assert(len <= prependableBytes());
     assert(beginRead() - len >= begin());
     memcpy(beginRead() - len, src, len);
     unread(len);
-}
-void Buffer::preappend(int64_t num)
-{
-    preappend(&num, sizeof(int64_t));
-}
-
-void Buffer::preappend(int32_t num)
-{
-    preappend(&num, sizeof(int32_t));
-}
-
-void Buffer::preappend(int16_t num)
-{
-    preappend(&num, sizeof(int16_t));
-}
-
-void Buffer::preappend(int8_t num)
-{
-    preappend(&num, sizeof(int8_t));
 }
 
 //////////////////////////////////////////////////
@@ -370,53 +261,6 @@ void Buffer::swap(Buffer& that)
     buf_.swap(that.buf_);
     std::swap(readindex_, that.readindex_);
     std::swap(writeindex_, that.writeindex_);
-}
-
-/////////////////////////////////////////
-/// privates
-/////////////////////////////////////////
-char* Buffer::begin()
-{
-    return &(*buf_.begin());
-} // namespace net
-
-const char* Buffer::begin() const
-{
-    return &(*buf_.begin());
-}
-
-char* Buffer::beginRead()
-{
-    return begin() + readindex_;
-}
-const char* Buffer::beginRead() const
-{
-    return begin() + readindex_;
-}
-
-char* Buffer::beginWrite()
-{
-    return begin() + writeindex_;
-}
-const char* Buffer::beginWrite() const
-{
-    return begin() + writeindex_;
-}
-
-void Buffer::hasRead(size_t sz)
-{
-    readindex_ += sz;
-    if(readindex_ == writeindex_){
-        readindex_ = writeindex_ = kprependSize_;
-    }
-}
-void Buffer::hasWritten(size_t sz)
-{
-    writeindex_ += sz;
-}
-void Buffer::unread(size_t sz)
-{
-    readindex_ -= sz;
 }
 
 } // namespace LanceNet::net
