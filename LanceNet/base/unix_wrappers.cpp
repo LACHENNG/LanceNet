@@ -1,7 +1,13 @@
 #include "LanceNet/base/unix_wrappers.h"
+#include "LanceNet/base/Logging.h"
+#include <asm-generic/socket.h>
+#include <cstring>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <sys/timerfd.h>
 #include <sys/uio.h>
+#include <netinet/tcp.h>
 
 /* show error msg relate to errno and exit*/
 #define handle_error(msg) \
@@ -47,7 +53,7 @@ ssize_t Readv(int __fd, const struct iovec *__iovec, int __count)
 {
     auto n = ::readv(__fd, __iovec, __count);
     if(n == -1){
-        handle_error("readv()");
+        LOG_WARN << "errno " << strerror(errno);
     }
     return n;
 }
@@ -162,6 +168,8 @@ int Open_listenfd(int port){
 
         /* Eliminates "Address already in use" error from bind" */
         setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, (const void*)&optval, sizeof(int));
+        int optval = 1;
+        setsockopt(sfd, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(int));
 
         if( (rc = bind(sfd, p->ai_addr, p->ai_addrlen)) == 0)
             break;             /* Success */

@@ -121,7 +121,7 @@ void Poller::fillActiveChannels(int numEvents, FdChannelList* activeChannels)
 {
     for(int i = 0; i < static_cast<int>(fdlist_.size()) && numEvents > 0; i++)
     {
-        auto pollfd = fdlist_[i];
+        auto& pollfd = fdlist_[i];
         if(pollfd.revents > 0)
         {
             numEvents--;
@@ -131,10 +131,10 @@ void Poller::fillActiveChannels(int numEvents, FdChannelList* activeChannels)
 
             if(iter != fdMap_.end())
             {
-                assert(fdMap_[fd]->fd() == fd);
+                assert(iter->second->fd() == fd);
                 // set revents of FdChannel so that the event can be handled
-                fdMap_[fd]->revents(pollfd.revents);
-                activeChannels->push_back(fdMap_[fd]);
+                iter->second->revents(pollfd.revents);
+                activeChannels->emplace_back(iter->second);
             }
             else
             {

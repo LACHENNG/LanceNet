@@ -27,7 +27,7 @@ EventLoop::EventLoop()
     running_(false),
     exit_(false),
     multiplexer_(IOMultiplexer::getDefaultIOMultiplexer(this)),
-    runInLoopImpl_(std::make_unique<RunInLoopImpl>(this)),
+    runInLoopImpl_(this),
     timerQueueUptr_(std::make_unique<TimerQueue>(this))
 {
     // only one instances is allowed in IO thread(EventLoop thread)
@@ -61,19 +61,6 @@ void EventLoop::StartLoop(){
     }
 }
 
-void EventLoop::assertInEventLoopThread()
-{
-    if(tid_ != ThisThread::Gettid()){
-        LOG_FATALC << "assertInEventLoopThread failed, EventLoop is created at thread with id : " << tid_ << " but this assertion is invoked at thread with id : " << ThisThread::Gettid();
-        exit(EXIT_FAILURE);
-    }
-}
-
-bool EventLoop::isInEventLoopThread()
-{
-    return tid_ == ThisThread::Gettid();
-}
-
 void EventLoop::assertCanCreateNewLoop()
 {
     if(tl_eventLoopPtrOfThisThread != NULL)
@@ -81,14 +68,6 @@ void EventLoop::assertCanCreateNewLoop()
         LOG_FATALC << "assertCanCreateNewLoop failed,there is allreay one EvnetLoop at thread : " << ThisThread::Gettid();
         exit(EXIT_FAILURE);
     }
-}
-
-EventLoop* EventLoop::getEventLoopOfThisThread()
-{
-    //static std::unordered_map<pid_t, EventLoop*> s_umap;
-
-    //return s_umap[ThisThread::Gettid()];
-    return tl_eventLoopPtrOfThisThread;
 }
 
 void EventLoop::update(FdChannel* sockChannel)
@@ -110,23 +89,14 @@ void EventLoop::quit()
     exit_ = true;
     // FIXME: wakeup more elegantly
     // runInLoopImpl_->wakeup(); eg.
-    runInLoopImpl_->pend([](){std::cout<<"quit"<<std::endl;});
+    runInLoopImpl_.pend([](){ std::cout<<"quit"<<std::endl;});
 }
 
-void EventLoop::runInLoop(PendFunction functor)
+void EventLoop::abortNotInLoopThread()
 {
-    // If the current thread is EventLoop thread, call the function synchronously, otherwise pend
-    if(isInEventLoopThread()){
-        functor();
-    }
-    else{
-        pendInLoop(functor);
-    }
-}
-
-void EventLoop::pendInLoop(PendFunction functor)
-{
-    runInLoopImpl_->pend(functor);
+    LOG_FATAL << "EventLoop::abortNotInLoopThread - EventLoop " << this 
+              << " was created in threadId_ = " << tid_
+              << ", current thread id = " <<  ThisThread::Gettid();
 }
 
 TimerId EventLoop::runAt(TimeStamp when, Callback what, double delaySecs)
@@ -182,7 +152,7 @@ void EventLoop::RunInLoopImpl::doPendingFunctors()
     readEventfdOnce();
 }
 
-void EventLoop::RunInLoopImpl::pend(EventLoop::PendFunction func)
+void EventLoop::RunInLoopImpl::pend(const EventLoop::PendFunction& func)
 {
     MutexLockGuard lock(mutex_);
     pendingFuncs_.push_back(func);

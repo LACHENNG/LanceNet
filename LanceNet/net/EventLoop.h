@@ -50,12 +50,17 @@ public:
     void StartLoop();
 
     // get EventLoop of current thread (NULL may return if no EventLoop there)
-    static selfPtr getEventLoopOfThisThread();
+    static selfPtr getEventLoopOfThisThread(){ return tl_eventLoopPtrOfThisThread; }
     static void assertCanCreateNewLoop();
 
     // assert if is in Loop thread;
-    void assertInEventLoopThread();
-    bool isInEventLoopThread();
+    void assertInEventLoopThread(){
+        if(tid_ != ThisThread::Gettid()){
+            abortNotInLoopThread();
+        }
+    }
+
+    bool isInEventLoopThread(){ return tid_ == ThisThread::Gettid(); }
 
     void update(FdChannel* fdChannel);
     void remove(FdChannel* fdChannel);
@@ -64,14 +69,18 @@ public:
     void quit();
 
     // Transfers function execution from another thread to the current eventloop thread
-    void runInLoop(PendFunction pendingfunc); //sematic
-    void pendInLoop(PendFunction pendingfunc); //sematic
+    void runInLoop(const PendFunction& functor){
+        if(isInEventLoopThread()) functor();
+        else pendInLoop(functor);
+    }
+    void pendInLoop(const PendFunction& functor) { runInLoopImpl_.pend(functor); }
 
     // A more useful wrapper to use TimerQueue
     TimerId runAt(TimeStamp when , Callback whatFunc, double delaySecs = 0);
     TimerId runEvery(TimeStamp start, double interval, Callback whatFunc);
 
 private:
+    void abortNotInLoopThread();
     // Transfer exection from other to EventLoop by eventfd + callback + pendingFuncions queue mechanism
     class RunInLoopImpl
     {
@@ -79,7 +88,7 @@ private:
         explicit RunInLoopImpl(EventLoop* owner_loop);
         ~RunInLoopImpl();
 
-        void pend(PendFunction func);
+        void pend(const PendFunction& func);
 
     private:
         // can only called in EventLoop thread
@@ -113,7 +122,7 @@ private:
     // Epoller* multiplexer_;
     std::unique_ptr<IOMultiplexer> multiplexer_;
 
-    std::unique_ptr<RunInLoopImpl> runInLoopImpl_;
+    RunInLoopImpl runInLoopImpl_;
 
     std::unique_ptr<TimerQueue> timerQueueUptr_;
 };
