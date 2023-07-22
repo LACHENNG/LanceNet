@@ -20,6 +20,7 @@ add_executable(TcpClient ./TcpServer_test_client.cpp )
 
 add_executable(EventLoopPool_test ./EventLoopPool_test.cpp)
 add_executable(Connector_test ./Connector_test.cpp)
+add_executable(test_buffer_grow ./test_bufferGrow.cpp)
 
 target_link_libraries(buffer_test PRIVATE
     LanceNet_net
@@ -103,6 +104,11 @@ target_link_libraries(EventLoopPool_test PRIVATE
     LanceNet_base
 )
 target_link_libraries(Connector_test PRIVATE
+    LanceNet_net
+    LanceNet_base
+)
+
+target_link_libraries(test_buffer_grow PRIVATE
     LanceNet_net
     LanceNet_base
 )

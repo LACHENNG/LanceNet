@@ -171,7 +171,7 @@ void Buffer::ensureWriteableSpace(size_t len)
 
     }
     else {
-        buf_.resize( writeindex_ + len);
+        resize(writeindex_ + len);
     }
 }
 
@@ -262,6 +262,7 @@ void Buffer::swap(Buffer& that)
     buf_.swap(that.buf_);
     std::swap(readindex_, that.readindex_);
     std::swap(writeindex_, that.writeindex_);
+    std::swap(cached_buf_begin_, that.cached_buf_begin_);
 }
 
 } // namespace LanceNet::net

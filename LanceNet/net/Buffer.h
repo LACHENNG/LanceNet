@@ -35,6 +35,8 @@ private:
     const int kprependSize_;
     const int kdefaultInitSize_;
     constexpr static const char* const kCRLF = "\r\n" ;
+    // optimize speeed : caching buf_.begin() 
+    void* cached_buf_begin_;
 
 public:
     // default buffer size
@@ -147,7 +149,7 @@ private:
     const char* beginRead() const { return cachedBegin() + readindex_; }
     char* beginWrite() { return cachedBegin() + writeindex_; }
     const char* beginWrite() const { return cachedBegin() + writeindex_; }
-    char* cachedBegin() const { return cached_buf_begin_; }
+    char* cachedBegin() const { return static_cast<char*>(cached_buf_begin_); }
     void resetRWIndex() { readindex_ = writeindex_ = kprependSize_; }
     // adjust read watermark
     void hasRead(size_t sz) { 
@@ -161,8 +163,8 @@ private:
 
     void ensureWriteableSpace(size_t len);
 
-    // optimize speeed : caching buf_.begin() 
-    char* cached_buf_begin_;
+    void resize(size_t sz) { buf_.resize(sz); cached_buf_begin_ = buf_.data(); }
+
 };
 
 } // namespace net

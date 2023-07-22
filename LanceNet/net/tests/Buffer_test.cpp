@@ -268,7 +268,12 @@ BOOST_AUTO_TEST_CASE(testIntervalMoveToMakeSapce)
 
 BOOST_AUTO_TEST_CASE(testGrowAndPrepend)
 {
-    Buffer buf(8, 16);
+    const int initSz = 16;
+    const int prependSz = 8;
+    Buffer buf(initSz, prependSz);
+    BOOST_CHECK_EQUAL(buf.size(), 8 + 16);
+    BOOST_CHECK_EQUAL(buf.prependSize(), 8);
+    BOOST_CHECK_EQUAL(buf.writeableBytes(), 16);
     int msg_len = 16;
     buf.preappend(msg_len);
     buf.append("0123456789123456");
