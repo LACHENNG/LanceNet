@@ -81,7 +81,14 @@ void TcpConnection::sendInLoop(const void* message, size_t len)
     int nWrote = 0;
     if(outputBuffer_.readableBytes() == 0 )
     {
-        int n = Write(fdOfTalkChannel(), message, len);
+        int n = ::write(fdOfTalkChannel(), message, len);
+        if(n < 0 && (n != EAGAIN && n != EWOULDBLOCK))
+        {
+            if(errno == EAGAIN || errno == EWOULDBLOCK){
+                nWrote = 0;
+            }
+            else handle_error("write()");
+        }
         nWrote += n;
     }
     // FIXME: this may have the problem that the client receive data too slow

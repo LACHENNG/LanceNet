@@ -31,13 +31,7 @@ extern int ncalls_gettid;
 // get system-wise thread id of current calling thread
 inline pid_t Gettid()
 {
-    if(tl_cached_tid == INVALID_THREAD_ID){
-#ifdef DEBUG
-        ncalls_gettid++;
-#endif
-        tl_cached_tid = ::syscall(SYS_gettid);
-    }
-    return tl_cached_tid;
+    return (tl_cached_tid == INVALID_THREAD_ID ? tl_cached_tid = ::syscall(SYS_gettid) : tl_cached_tid );
 }
 
 inline char* GetCurrentThreadName()

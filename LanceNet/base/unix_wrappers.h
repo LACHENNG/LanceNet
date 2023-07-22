@@ -27,6 +27,8 @@
 
 #include <sys/eventfd.h>
 #include <sys/epoll.h>
+
+#include <LanceNet/base/Logging.h>
 /* defined by glic*/
 // extern int errno;
 
@@ -46,10 +48,34 @@ typedef struct sockaddr_in SA_IN;
 char* itoa_s(int num);
 
 /* read write */
-ssize_t Read(int fd, void *buf, size_t count);
-ssize_t Write(int fd, const void *buf, size_t count);
+// try to inline to speed up
+inline ssize_t Read(int fd, void *buf, size_t count){
+    int nRead = read(fd, buf, count);
 
-ssize_t Readv(int __fd, const struct iovec *__iovec, int __count);
+    if(nRead < 0 && nRead != EAGAIN){
+        handle_error("read()");
+    }
+    return nRead;
+}
+inline ssize_t Write(int fd, const void *buf, size_t count){
+    int nWrite = write(fd, buf, count);
+    if(nWrite < 0 && (nWrite != EAGAIN && nWrite != EWOULDBLOCK))
+    {
+        if(errno == EAGAIN || errno == EWOULDBLOCK){
+            return 0;
+        }
+        else handle_error("write()");
+    }
+    return nWrite;
+}
+
+inline ssize_t Readv(int __fd, const struct iovec *__iovec, int __count){
+    auto n = ::readv(__fd, __iovec, __count);
+    if(n == -1){
+        LOG_WARN << "errno " << strerror(errno);
+    }
+    return n;
+}
 
 /* sockets interface wrappers*/
 int Socket(int domain, int type, int protocol);

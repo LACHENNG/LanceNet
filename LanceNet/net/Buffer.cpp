@@ -121,14 +121,19 @@ ssize_t Buffer::readFd(int fd)
 
 ssize_t Buffer::readFdFast(int fd)
 {
-    struct iovec iovs[2];
+    const int iovsLen = 2;
+    struct iovec iovs[iovsLen];
     // static std::vector<struct iovec> iovs(2, {nullptr, 0});
     iovs[0].iov_base = beginWrite();
     iovs[0].iov_len = writeableBytes();
     iovs[1].iov_base = tl_extra_buf;
     iovs[1].iov_len = kextra_buf_len;
 
-    auto nBytesRead = Readv(fd, iovs, sizeof(iovs)/sizeof(*iovs));
+    // auto nBytesRead = Readv(fd, iovs, sizeof(iovs)/sizeof(*iovs));
+    auto nBytesRead = ::readv(fd, iovs, iovsLen);
+    if(nBytesRead == -1){
+        LOG_WARN << "readv()" << strerror(errno);
+    }
 
     // if no data read into extra buffer
     if(nBytesRead <= static_cast<ssize_t>(iovs[0].iov_len))
