@@ -167,7 +167,8 @@ void EventLoop::RunInLoopImpl::writeEventfd()
     // wirte to eventfd so that it will become readable
     //LOG_INFOC << "RunInLoopImpl::writeEventfd()";
     uint64_t __ = 1;
-    Write(eventfd_, &__, sizeof(uint64_t));
+    int n = Write(eventfd_, &__, sizeof(uint64_t));
+    assert(n == sizeof(uint64_t));
 }
 
 void EventLoop::RunInLoopImpl::readEventfdOnce()
@@ -180,7 +181,7 @@ void EventLoop::RunInLoopImpl::readEventfdOnce()
 
 int EventLoop::RunInLoopImpl::makeEventfd()
 {
-    int fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+    int fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK | EFD_SEMAPHORE);
     return fd;
 }
 
