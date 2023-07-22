@@ -16,6 +16,7 @@ set(SRC_LIST
     IOMultiplexer/Epoller.cpp
     IOMultiplexer/Poller.cpp
     IOMultiplexer/Selecter.cpp
+    IOMultiplexer/PollerX.cpp
     FdChannel.cpp
 
     Timer.cpp
