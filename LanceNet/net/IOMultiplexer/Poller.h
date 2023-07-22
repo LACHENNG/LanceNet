@@ -50,9 +50,10 @@ private:
 
 private:
     using PollFdList = std::vector<struct pollfd>;
-
+    using FdMap = std::unordered_map<int, FdChannel*>;
     // FdChannelList sockChannelList_;
     PollFdList fdlist_;
+    FdMap fdMap_;
 };
 
 } // net

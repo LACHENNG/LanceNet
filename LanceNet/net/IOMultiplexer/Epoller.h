@@ -46,6 +46,8 @@ private:
     // used by ::epoll_wait etc.
     EpollEventList epoll_events_;
 
+    using FdMap = std::unordered_map<int, FdChannel*>;
+    FdMap fdMap_;
 };
 
 } // net

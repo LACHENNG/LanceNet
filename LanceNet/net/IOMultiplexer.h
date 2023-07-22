@@ -43,9 +43,6 @@ public:
 private:
     EventLoop* owner_loop_;
 
-protected:
-    using FdMap = std::unordered_map<int, FdChannel*>;
-    FdMap fdMap_;
 };
 
 } // net

@@ -40,6 +40,9 @@ private:
 
     struct timeval getTimeVal(int timeoutMs);
 private:
+    using FdMap = std::unordered_map<int, FdChannel*>;
+    FdMap fdMap_;
+
     int maxfdsofar_;
     fd_set readset_;
     fd_set writeset_;

@@ -94,11 +94,8 @@ void Selecter::disableAllEvent(FdChannel* channel)
     (void)allreadyExists;
     assert(fdMap_[fd] == channel);
 
-        FD_CLR(fd, &readset_);
-   
-    
-        FD_CLR(fd, &writeset_);
-    
+    FD_CLR(fd, &readset_);
+    FD_CLR(fd, &writeset_);
     // use to set status in this context
     channel->index(kDeleted);
 }
