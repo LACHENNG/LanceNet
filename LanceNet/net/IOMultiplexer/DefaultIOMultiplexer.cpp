@@ -13,12 +13,12 @@ namespace net
 
 IOMultiplexer* IOMultiplexer::getDefaultIOMultiplexer(EventLoop* loop)
 {
-    if(::getenv("LanceNet_USE_POLL")){
-        return new Poller(loop);
+    if(::getenv("LanceNet_USE_EPOLL")){
+        return new Epoller(loop);
     }else if(::getenv("LanceNet_USE_SELECT")){
         return new Selecter(loop); 
     }
-    return new Epoller(loop);
+    return new Poller(loop);
 }
 
 }

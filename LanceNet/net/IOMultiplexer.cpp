@@ -12,7 +12,8 @@ IOMultiplexer::IOMultiplexer(EventLoop* loop)
 }
 
 IOMultiplexer::~IOMultiplexer()
-{};
+{
+}
 
 void IOMultiplexer::assertInEventLoopThread()
 {

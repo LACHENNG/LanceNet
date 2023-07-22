@@ -69,7 +69,9 @@ void TcpServer::onNewConnection(int conn_fd, const SA_IN* peer_addr)
     tcpConnPtr->setOnMessageCb(onMessageCb_);
     tcpConnPtr->setOnDisconnectCb(onDissconCb_);
     tcpConnPtr->setCloseCallback(std::bind(&TcpServer::removeConnection, this, _1));
-    ioLoop->runInLoop(std::bind(&TcpConnection::connectionEstablished, tcpConnPtr));
+    ioLoop->runInLoop([tcpConnPtr](){
+        tcpConnPtr->connectionEstablished();
+    });
     // tcpConnPtr->connectionEstablished();
     tcp_connections_[conn_name] = tcpConnPtr;
 }

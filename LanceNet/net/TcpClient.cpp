@@ -60,8 +60,11 @@ void TcpClient::OnRawConnection(int conn_sock)
                               conn_sock,
                               "TcpConnection",
                               &sa_in));
-    tcpConnectionPtr_->setCloseCallback(
-        std::bind(&TcpClient::removeConnection, this, std::placeholders::_1));
+    // tcpConnectionPtr_->setCloseCallback(
+    //    std::bind(&TcpClient::removeConnection, this, std::placeholders::_1));
+    tcpConnectionPtr_->setCloseCallback([this](const TcpConnectionPtr &conn){
+        this->removeConnection(conn);
+    });
 
     tcpConnectionPtr_->setOnMessageCb(messagecb_);
     LOG_DEBUG << "last line in TcpClient::OnRawConnection conn use count before user on connection cb " << tcpConnectionPtr_.use_count();

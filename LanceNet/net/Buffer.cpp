@@ -24,7 +24,8 @@ Buffer::Buffer(int initSz, int prependSz)
     writeindex_(prependSz),
     kinitSize_(initSz),
     kprependSize_(prependSz),
-    kdefaultInitSize_(initSz)
+    kdefaultInitSize_(initSz),
+    cached_buf_begin_(buf_.data()) // caching buf_.begin()
 {
 }
 
@@ -34,7 +35,7 @@ Buffer::Buffer(int initSz, int prependSz)
 
 std::string Buffer::retrieveAllAsString()
 {
-    std::string rv = std::string(buf_.begin() + readindex_, buf_.begin() + writeindex_);
+    std::string rv = std::string(cachedBegin() + readindex_, cachedBegin() + writeindex_);
     retrieve(readableBytes());
     return rv;
 }

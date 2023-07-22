@@ -84,7 +84,7 @@ public:
     // take out byte from buffer
     void retrieve(size_t size) { assert(size >= 0 && size <= readableBytes()); hasRead(size); }
     // take out byte from buffer
-    void retrieveAll() { retrieve(readableBytes()); }
+    void retrieveAll() { resetRWIndex(); }
     // take out byte from buffer
     void retrieveInt8() { retrieve(sizeof(int8_t)); }
     // take out byte from buffer
@@ -141,23 +141,28 @@ public:
 
 private:
     // the begining of internal mem buffer
-    char* begin() { return &(*buf_.begin()); }
-    const char* begin() const { return &(*buf_.begin()); }
-    char* beginRead() { return begin() + readindex_; }
-    const char* beginRead() const { return begin() + readindex_; }
-    char* beginWrite() { return begin() + writeindex_; }
-    const char* beginWrite() const { return begin() + writeindex_; }
+    char* begin() { return cachedBegin(); }
+    const char* begin() const { return cachedBegin(); }
+    char* beginRead() { return cachedBegin() + readindex_; }
+    const char* beginRead() const { return cachedBegin() + readindex_; }
+    char* beginWrite() { return cachedBegin() + writeindex_; }
+    const char* beginWrite() const { return cachedBegin() + writeindex_; }
+    char* cachedBegin() const { return cached_buf_begin_; }
+    void resetRWIndex() { readindex_ = writeindex_ = kprependSize_; }
     // adjust read watermark
     void hasRead(size_t sz) { 
         readindex_ += sz;
-        if(readindex_ == writeindex_){ readindex_ = writeindex_ = kprependSize_; }
+        if(readindex_ == writeindex_){ resetRWIndex(); }
     }
     // adjust write watermark
-    void hasWritten(size_t sz) { writeindex_ += sz; assert(writeindex_ < size()); }
+    void hasWritten(size_t sz) { writeindex_ += sz; }
     // unread watermark
     void unread(size_t sz) { readindex_ -= sz; assert(readindex_ >= 0); }
 
     void ensureWriteableSpace(size_t len);
+
+    // optimize speeed : caching buf_.begin() 
+    char* cached_buf_begin_;
 };
 
 } // namespace net

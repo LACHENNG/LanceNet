@@ -1,3 +1,4 @@
+#include "LanceNet/base/Time.h"
 #include "LanceNet/base/unix_wrappers.h"
 #include "LanceNet/net/EventLoop.h"
 #include "LanceNet/net/FdChannel.h"
@@ -19,7 +20,10 @@ Acceptor::Acceptor(EventLoop* loop, int listenPort)
     listening_(false)
 {
     LOG_INFOC << "Server: Listening at port " << listen_port_;
-    listenChannel->setReadCallback(std::bind(&Acceptor::handleRead, this));
+    //listenChannel->setReadCallback(std::bind(&Acceptor::handleRead, this));
+    listenChannel->setReadCallback([this](TimeStamp ts){
+        this->handleRead();
+    });
 }
 bool Acceptor::startListen()
 {

@@ -124,7 +124,10 @@ EventLoop::RunInLoopImpl::RunInLoopImpl(EventLoop* owner_loop)
     eventfdChannelUPtr_(std::make_unique<FdChannel>(owner_loop, eventfd_)),
     ower_loop_(owner_loop)
 {
-    eventfdChannelUPtr_->setReadCallback(std::bind(&EventLoop::RunInLoopImpl::doPendingFunctors, this));
+    // eventfdChannelUPtr_->setReadCallback(std::bind(&EventLoop::RunInLoopImpl::doPendingFunctors, this));
+    eventfdChannelUPtr_->setReadCallback([this](TimeStamp ts){
+        this->doPendingFunctors();
+    });
     eventfdChannelUPtr_->enableReading();
 }
 

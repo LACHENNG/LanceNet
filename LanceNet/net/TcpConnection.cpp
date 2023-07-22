@@ -20,8 +20,15 @@ TcpConnection::TcpConnection(EventLoop* loop, int connfd, std::string name, cons
     state_(kConnecting),
     talkChannelfd_(connfd)
 {
-    talkChannel_->setReadCallback(std::bind(&TcpConnection::handleRead, this, std::placeholders::_1));
-    talkChannel_->setWriteCallback(std::bind(&TcpConnection::handleWrite, this));
+    // talkChannel_->setReadCallback(std::bind(&TcpConnection::handleRead, this, std::placeholders::_1));
+    // talkChannel_->setWriteCallback(std::bind(&TcpConnection::handleWrite, this));
+    talkChannel_->setReadCallback([this](TimeStamp ts){
+        this->handleRead(ts);
+    });
+
+    talkChannel_->setWriteCallback([this](TimeStamp ts){
+        this->handleWrite();
+    });
 }
 
 TcpConnection::~TcpConnection()
@@ -151,7 +158,10 @@ void TcpConnection::shutdown()
 {
     if(state_ == kConnected){
         setState(kDisConnecting);
-        owner_loop_->runInLoop(std::bind(&TcpConnection::shutdownInLoop, this));
+        // owner_loop_->runInLoop(std::bind(&TcpConnection::shutdownInLoop, this));
+        owner_loop_->runInLoop([this](){
+            this->shutdownInLoop();
+        });
     }
 }
 

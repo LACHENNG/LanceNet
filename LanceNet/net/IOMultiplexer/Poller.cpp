@@ -128,13 +128,13 @@ void Poller::fillActiveChannels(int numEvents, FdChannelList* activeChannels)
 
             int fd = pollfd.fd;
             auto iter = fdMap_.find(fd);
-
+            FdChannel* channel = iter->second;
             if(iter != fdMap_.end())
             {
-                assert(iter->second->fd() == fd);
+                assert(channel->fd() == fd);
                 // set revents of FdChannel so that the event can be handled
-                iter->second->revents(pollfd.revents);
-                activeChannels->emplace_back(iter->second);
+                channel->revents(pollfd.revents);
+                activeChannels->push_back(channel); // faster than emplace back in this case base on performace analysis
             }
             else
             {
