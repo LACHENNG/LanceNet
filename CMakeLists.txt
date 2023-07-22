@@ -9,6 +9,8 @@ set(CMAKE_CXX_STANDARD 17) # Heterogeneous Lookup require C++14 , set.extract re
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 set(CMAKE_BUILD_TYPE Debug)
+# set(CMAKE_BUILD_TYPE Release)
+
 # Debug Purpose Only
 SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
 
@@ -29,7 +31,7 @@ set(CXX_FLAGS
  -Wwrite-strings
  -march=native
  # -MMD
- -std=c++11
+ -std=c++14
  -rdynamic
  )
 

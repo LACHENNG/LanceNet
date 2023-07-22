@@ -19,3 +19,6 @@ target_link_libraries(daytime_server PRIVATE
     LanceNet_base
     LanceNet_net
 )
+
+add_subdirectory(./chat/)
+
