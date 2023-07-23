@@ -165,11 +165,11 @@
 
 ```bash
  # 压测工具
- .\fortio.exe  load -qps 0 -n 100000 tcp://172.24.12.35:3456
+ .\fortio.exe  load -c 200 -qps 0 -n 100000 tcp://172.24.12.35:3456
  
- # 性能分析工具
+ # 执行性能分析
  valgrind --tool=callgrind ./echo_server --dump-instr=yes --trace-jump=yes
-
+ # 查看分析结果
  kcachegrind callgrind.out.20671
 ```
 
@@ -212,7 +212,7 @@
 
 ​	 优化效果：==65159.6 qps -->  721862.6 qps== 
 
-​	【[点击查看valgrind对此性能分析工具的结果](images\perf_push_vs_emplace.png)】
+​	【[点击查看valgrind对此的分析结果](images/perf_push_vs_emplace.png)】
 
 **优化7**： 优化了Poller类的数据结构，经过工具分析，由于其中被高频调用的Poller::poll方法中的map::find()占用了该方法很大的开销，因此考虑从hash map 到 array，降低了find的耗时
 
