@@ -6,6 +6,9 @@
 using namespace std;
 #include <boost/circular_buffer.hpp>
 
+using namespace LanceNet;
+using namespace LanceNet::base;
+
 BlockingQueue<int> que;
 unordered_set<int> uSet;
 CountDownLatch latch(2);
@@ -32,7 +35,7 @@ void reader(){
     bool running = true;
     int countdown = nthreads;
     while(running){
-        int data = que.get();
+        int data = que.take();
         uSet.insert(data);
         if(data == STOP_FLAG && --countdown == 0)
             running = false;

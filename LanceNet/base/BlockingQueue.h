@@ -51,9 +51,8 @@ public:
         T front(std::move(que_.front()));
         que_.pop_front();
 
-        return std::move(front);
+        return front;
         // Note: a temp object is a rvalue which is usually auto RVO optimized by the compiler
-        // but data is left value so explicitly std::move
     }
 };
 
