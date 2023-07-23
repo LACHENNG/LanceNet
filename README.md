@@ -1,50 +1,74 @@
-# LanceNet： 一个基于Reactor模式的高性能网络库
+# ⚡LanceNet： 一个基于Reactor模式的高性能网络库⚡
+
+
+
+## 引言 👀
 
 **代码统计**
 
 <img src="images/codecloc.png" alt="codecloc" style="zoom: 50%;" />
 
-​	本网络库旨在使用现代c++从零开始构建一个高性能的网络库，用作编程练习，将计算机网络，现代c++编程，软件工程等知识进行一次实际的项目转化，为了防止闭门造车，脱离主流的开发环境和思想，本项目的设计参考了陈硕的 《Linux多线程服务端编程》《CSAPP》《Effective Modern C++》等书籍，学习了很多实用和现代C++知识和设计思想
+​	本网络库旨在使用现代c++从零开始构建一个高性能的网络库，用作编程练习，将计算机网络，现代c++编程，软件工程等知识进行一次实际的项目转化，为了防止闭门造车，脱离主流的开发环境和思想，本项目的设计参考了陈硕的 《Linux多线程服务端编程》、《CSAPP》、《Effective C++》、《Effective Modern C++》等书籍，学习并践行了很多实用和现代C++知识和设计思想
 
-​	  简单来说，本项目是基于muduo重新实现的一个版本，大部分代码均进行了重写，精简或改进 （鉴于个人的水平有限，改写的过程可能会丢掉一些muduo的一些feature和少许性能）
+​	  简单来说，本项目使用Modern C++重构了muduo网络库，大部分代码均基于**c++11**进行了重写，精简或改进 ，使用smart pointer改善了内存管理，对一些类的实现进行了加强和改进，实现的echo服务能达到**百万pqs**, 甚至超越了muduo库，实现的优化包括但不限于：
 
 1. **Buffer类**
 
-   [简化] 精简了Muduo中使用readv(2)结合栈空间减少初始化buffer空间时大小的占用，**LancNet采用简化的设计**，直接使用底层vector<char\>  开辟一个小的存储空间，让底层容器自动进行内存按需增长。
+   为了防止在高并发数量的情况下，Buffer初始大小设置过大导致内存消耗大的问题，muduo中使用较小的Buffer大小初始化输入输出缓冲区，并使用linux 分散输入函数`readv(2)`结合栈空间**避免多次系统调用或复制数据的开销**，但由于栈空间仍然是个稀缺资源（大小十分有限），**开辟较大的栈空间可能直接或间接导致栈溢出**
 
-   [改进] 为了有效避免一开始就给每个buffer分配大内存，而是需要的时候，向Buffer末尾添加数据，让底层容器自动管理内存增长， 同时使用**scatter input(readv(2))** 结合栈空间的方式，一次读入足够多的数据，减少系统调用
+   🎯【改进】 **LanceNet** 利用GCC线程局部存储`__thread`构建了一个线程局部缓冲区，避免了开辟栈空间和可能导致的栈溢出的问题。同时由于thread local特性避免了加锁开销
+
+2. **Timestamp时间戳类**：
+
+   muduo采用使用`gettimeofday(2)`等函数来获取 从unix epoch 到现在的秒数和微秒数，精度**只能到微秒级别**
+
+   ✨【改进】基于**标准库std::chrono库**，精度能达到**纳秒**级别
 
    
 
-2. **LogStream类**: 兼顾了流式输出的优点(类型安全) 和 类似于printf方便的格式化
+3. **LogStream类**: 
 
-   [改进] 引入了了适用领域最新的**整型和浮点型数据转字符串**算法，比snprintf快数倍
+   兼顾了流式输出的优点(类型安全) 和 类似于printf方便的格式化
 
-   [改进 TODO] 支持类似于printf那样的格式化
+   [改进] 引入了了适用领域最先进的**浮点型数据转字符串 Grisu3**算法，比snprintf快数**4**倍
 
-3. **TimerQueue类**
+   > 参见 Grisu3算法论文 ：Loitsch, 《[*Printing Floating-Point Numbers Quickly and Accurately with Integers*](https://dl.acm.org/citation.cfm?id=1806623)》
+   >
+   > 参见 [GitHub 仓库](https://github.com/abolz/Drachennest/tree/master) 查看Grisu3算法的开源实现
 
-   - **muduo库的方案**：为了**快速得到当前已经过时的计时器**和正确处理**同一时间多个计时器到期**的情况，muduo采用`set<pair<TimeStamp, Timer*>> ` 来管理计时器，并使用裸指针，存在泄露风险，若在原来设计上采用set<pair<TimeStamp, unique\<Timer\>>>进行改进，需要涉及C++14 [异构查找](https://www.cppstories.com/2019/05/heterogeneous-lookup-cpp14/)，同时对于set存储设计unique_ptr等只能移动的类型，C++17引入的set::[extract]([std::set::extract - cppreference.com](https://en.cppreference.com/w/cpp/container/set/extract))是唯一能将move-only object移除set的方式，这会大大引入没必要的实现复杂度。
+   [改进 ] 支持类似于printf那样的格式化,例如 `LOG_INFO << Fmt("%d, %s", 1, "hello")`;
 
-   - **我的方案**：采用小顶堆对Timer进行管理， priority_queue存储pair类型pair<TimeStamp, vector<unique\<Timer\> > >, 简单使用TimeStamp即可查找过期的Timer，避免涉及C++14和17,
+   
 
-     为了正确处理移动语义，使用boost来执行成员函数绑定 boost::bind(&TimerQueue::_addTimer, this, std::move(timer)), 来得到一个std::function<void\>
+4. **TimerQueue计时器类**
+
+   - **muduo库的方案**：为了**快速得到当前已经过时的计时器**和正确处理**同一时间多个计时器到期**的情况，muduo采用`set<pair<TimeStamp, Timer*>> ` 来管理计时器，并使用**裸指针**，存在泄露风险
+
+   - 若在原来设计上采用set<pair<TimeStamp, unique\<Timer\>>>进行改进，需要涉及C++14 [异构查找](https://www.cppstories.com/2019/05/heterogeneous-lookup-cpp14/)，同时对于set存储设计unique_ptr等只能移动的类型，我们使用upper_bound 找到所有过期的计时器并移出set但这又会涉及到C++17的内容，其中引入的set::[extract]([std::set::extract - cppreference.com](https://en.cppreference.com/w/cpp/container/set/extract))是唯一能将move-only object移出set的方式，这会大大引入没必要的实现复杂度。
+
+     >  有关异构查找和std::set::extract() (C++17)的使用示例参见测试源码 `/LanceNet/LanceNet/net/tests/HeterLookUpAndSetExtract.cpp`
+
+     - **我的方案**：采用小顶堆对Timer进行管理，具体的，使用`priority_queue`存储pair类型pair<TimeStamp, vector<unique\<Timer\> > >, 简单使用TimeStamp即可查找过期的Timer，避免涉及C++14和C++17, 同时在使用过程中可能设计 lambda 表达式和 move-only object 两者的交互这样一个在C++11中比较棘手的问题，但本项目采用如下的方案解决了该问题
+     - 在c++11中，由于不支持直接将对象移动到lambda中，但可以使用lambda 和 std::bind来模拟实现 `参见Eeffective Modern C++ Item 32`
 
      ```c++
-     boost::bind(&TimerQueue::_addTimer, this, std::move(timer))
+     std::bind([](const T& data), this, std::move(data)) 
+         // data is a move-only object
+     ```
+
+     2. 如果使用c++14，可以直接使用**init capture**将对象直接移动到lambda 生成的closure class中，详见 《Effective Mordern C++》Item 32 ： Use init capture to move objects into closure
+
+     ```c++
+     auto func = [data = std::move(data)]
+                {/*use of data*/};
      ```
 
      
 
-     
-
-​	 说明：本项目的类名设计多数来自于muduo，一些类的接口设计也参考了muduo，但几乎所有的代码都在源代码的基础上进行了**简化和重新实现**，少许的第三方代码，例如Google 的 StringPiece等直接拷贝的源文件。
-
-
 
 # Designs ✨
 
-## 0. 基础库
+## 1. 基础库（LanceNet base library）
 
 基础库主要是对posix系列的函数进行封装，主要包括
 
@@ -54,24 +78,22 @@
 1. 对常见unix系统调用的封装
 1. 日志库
 1. 线程池
-1. 高层同步设施：阻塞队列和倒计时（CountDownLatch）
+1. 高层同步设施：生产消费者队列和倒计时（CountDownLatch）
 1. 底层同步设施：条件变量的封装
 
 
 
-### 0.1 多线程异步日志库
+#### 0.1 多线程异步日志库
 
 **日志格式**：[LOG_LEVEL] 20990101 12:10:01.123456 Message - Example.cpp:100
 
-**特点：**
+**特点[改进]：**
 
 1. 时间戳，基于**标准库std::chrono库**，精度能达到纳秒级别
 
-2. 更改了默认的 整数浮点数转字符串的算法
+2. 更改了默认的`snprintf`整数浮点数转字符串的算法
 
    使用 两种高性能的算法，提升了**整型和浮点型数值转字符串**的速度
-
-   具体： snprintf 替換成領域最新的算法，速度快数倍
 
 3. 高精度的时间间隔计算，最高精确到纳秒($1e^{-9}s$), 时间戳采用了微秒，原因是这个精度一般够用了
 
@@ -91,7 +113,7 @@
 
 
 
-### 0.2 Buffer设计和使用
+#### 0.2 Buffer设计和使用 
 
 ​	非阻塞网络编程中，如何设计并使用缓冲区？一方面希望减少系统调用次数，另一方面我们想节约内存，例如10k连接每个链接个分配一个读写缓冲区，将消耗1GB内存，但多数情况下这些缓冲区利用率是很低的。
 
@@ -101,103 +123,119 @@
 
 
 
-## 1. 网络库
+## 2. 核心库 🎈
 
-### Feature🎈
+### Main Features
 
-1. 支持多线程多开EventLoop，使用Round-Robin实现了简单的**负载均衡**
+​	LanceNet网络库采用和module 类似的 **one loop per-thread** + **thread pool**的设计方案
 
-2. 同时支持了**Select**、**Poll**、**Epoll**（**LT**模式）三种IO 复用方式
-3. 支持应用层发送和接收**应用层缓冲区**
+1. 支持多线程多开EventLoop，创建多个IO thread，使用Round-Robin实现了简单的**负载均衡**
 
-4. 提供了“三个半”事件的**回调接口**（详细见下文“TCP网络编程本质”），用户可用方便的注册自己的处理函数实现业务逻辑
+2. 同时支持了**Select**、**Poll**、**Epoll**（**LT**模式）三种IO 复用方式。采用抽象接口的方式，隔离了实现
 
-​	 
+3. 支持应用层发送和接收**应用层缓冲区**，【改进】读socket采用了thread local extral buffer 和  scatter input的方式减少系统调用
 
-#### TCP 网络编程本质
+4. 提供了“三个半”事件的**回调接口**（见 *《Linux 多线程服务端编程* 》 “TCP网络编程本质”），用户可用方便的注册自己的处理函数实现业务逻辑
 
-- 处理三个半事件
+5. 构建了一种==消息反射==（**ProtobufMsgCodec**） 和 ==消息分发==（**ProtobufMsgDispatcher**）**的网络传输和处理方案**，进一步简化了应用的构建
 
-  1. 连接建立
-
-  2. 连接断开 （主动断开close、shutdown）和 被动断开（read ()返回0）
-
-  3. 消息到达 （文件描述符可读，涉及到如何处理分包，应用层缓冲区如何设计）
-
-  4. 数据发送完毕（算半个事件，指的是将数据写入了TCP内核缓冲区）
-
+   - 以具体类的形式提供，用户可以方便的将`ProtobufCodec`和`ProtobufMessageDispatcher`组合(Composite) 到自己的类中，即插即用，当然你也可以不用，LanceNet不强迫你非得怎么样，提供最大的灵活性🙃
+   
+   - **ProtobufMsgCodec**： 基于Google Protobuf作为网络通信协议的设计，根据不同的消息类型自动地进行序列化（编码）和反序列化（解码）
+   
+   - **ProtobufMsgDispatcher**：根据消息类型，**分发**到不同处理函数（用户需要提前注册某个消息类型和对应的处理函数）
+   
      
 
-其中有很多细节和难点需要思考：
+## 3. App示例（Apps build on LanceNet library）
 
-1. 如何主动关闭连接，保证对方收到全部数据？ 特别是有应用层缓冲区的情况
-
-2. 应用层接受缓冲区和发生缓冲区的必要性？
-
-3. 缓冲区设置多大？ 如果每个连接分配一个读写缓冲区，但大多数时候缓冲区利用率很低，造成浪费，如何解决？
-
-4. 接收方和发送方处理速度不一致，会不会导致数据堆积在发送方导致内存暴涨？
-
-   
-
-## 网络并发服务程序设计方案
-
-1. process-per-connnection,传统的unix编程方案，使用fork，每一个连接开一个进程
-2. thread-per-connection，传统的java网络编程方案，线程过多对操作系统的scheduler一个大负担。
-3. Io multiplexing（select 、pool、epool） ，几乎肯定要使用 non-blocking IO，而使用非阻塞IO肯定要使用应用层buffer（难度最大）。
+​	  得益于LanceNet的结构设计和底层优化，构建的应用容易获得较高的并发性能和网络吞吐， app文件夹下包含了基于LanceNet构建的几个有趣的应用，第一个主要测试库的性能和负载均衡，第二测试使用网络库提供的消息编解码和分发构建应用的便利性：
 
 
+#### 1. echo 服务（RFC 862）（但是百万高并发🎉）：
 
-主要讲一下第三种，这一种本质是 （event-driven**事件驱动**）编程模型，大佬Doug Schmidt已经为我们总结好了一套范式，**Reactor**，让我们有章可循。这些通用的Reactor库包括 `libevent(c)`、`Netty(java)`、`twisted(python)`等。
+【简介】 经过压力测试（[Fortio开源工具](https://github.com/fortio/fortio)）测试echo 服务的 qps，观察库的性能和负载情况(测试工具在WSL2下运行),  并通过性能分析和调优，最终超过了Muduo，达到百万并发级别
 
+✨**涉及到的内容**
 
+1. 顺便测试LanceNet多线程和并发性能
+2. fortio开源工具对本例的tcp-echo服务进行qps测试
+3. valgrind 分析性能瓶颈和程序代码优化
+4. 顺便测试高并发（4096个连接）情况下是否有资源（文件描述符）泄露
 
-**Reactor模式的主要思想**：网络编程中有很多是事务性（routine）的工作，可以提取为公用的框架或库，用户只需要填上关键的业务逻辑代码，并将回调注册到框架中，就可以实现完整的网络服务，这就是Reactor模式的主要思想。它的意义在于将消息（IO事件）分发到用户提供的处理函数，<u>并保持网络部分的通用代码不变</u>，独立于用户的业务逻辑。<u>Reactor最核心的事件分发机制，即将IO multiplex拿到的IO事件分发给各个文件描述符(fd)的事件处理函数</u>。
+```bash
+ # 压测工具
+ .\fortio.exe  load -qps 0 -n 100000 tcp://172.24.12.35:3456
+ 
+ # 性能分析工具
+ valgrind --tool=callgrind ./echo_server --dump-instr=yes --trace-jump=yes
 
-
-
-**本项目采用的Reactor模型**
-
-首先看看一个普通的Reactor模型，全部的IO工作都在一个Reactor线程完成，计算任务交给thread pool，。如果计算任务彼此独立，且IO压力不大，这种方案是非常实用的，比如用来做求解数独的服务器（sudoku solver）。
+ kcachegrind callgrind.out.20671
+```
 
 
 
-本项目采用加强版，将<u>连接分散到多个Reactor线程</u>（Reactor线程也就是IO线程）：
+使用开源frotio benchmark tool 发送echo请求 
 
-1. 一个**主Reactor**，用于负责accept(2)链接，然后把连接挂载某个**子Reactor**中 （采用round-robin）
-2. 将该连接的所有操作交给子Reactor处理，每个子Reactor将计算任务交给线程池计算，或者小规模任务直接在当前IO线程完成并直接返回结果，减少响应延迟
+**测试基准**: 使用fortio自带的echo服务测试该工具的echo qps极限值 和 muduo库的极限值
 
-可见这种模型具有更强的适应性，这种结构的时序图如下：
+`	$ fortio udp-echo &` 启动自带的echo服务
 
-<img src="images/mutli-threadNetArch.png" style="zoom: 33%;" />
+`	fortio load -qps -0 -n 100000 udp://localhost:8078/`  启动测试
 
+> **fortio自带echo server**： All done 1000000 calls (plus 0 warmup) 0.320 ms avg, ==702796.2 qps==
 
-
-如何选取Reactor的数量？一般来说按照**每千兆比特每秒**的吞吐量配一个event loop比较合适，并且同一个IO线程下的事件没有优先级，这是为了防止优先级反转的发生，如果你要处理心跳连接，并且认为优先级较高，那个应该用单独的IO线程管理，这样就防止了数据连接上的事件阻塞了心跳事件。
-
+>  **Moduo 实现的echo-server库**： All done 1000000 calls (plus 0 warmup) 0.283 ms avg, ==823561.6 qps==
 
 
 
+**测试LanceNet**
 
-**总结**
+​	最开始的测试仅仅有**30万**多一点的qps，为此我借助了**Valgrind性能分析工具**分析了项目代码的执行耗时，并进行了高度优化
 
-本模型采用的编程模式为：one loop per thread + thread pool
+**优化1**：
 
-- event loop(Reactor线程) 用作non-blocking IO和定时器
-- thread pool 用来做计算，具体可以是任务队列和生产消费者队列
+​	echo的时候，减少了从应用层Buffer到std::string的拷贝，减少一次内存拷贝的开销
+
+**优化2** ： 对于一些高频调用的函数，例如Buffer::readFd, 使用固定大小的C数组代替了vector，避免初始化开销
+
+**优化3**： 对类的短函数，全部改成内联实现，尤其是高频使用的（使用valgrind 对热点函数进行分析）
+
+**优化4** ： 对shared_ptr类型的参数传递，使用const reference， 传参时引用计数所导致的开销（EC Item 32）
+
+**优化5**： 减少使用std::bind ，使用lambda （Effective Modern C++ Item 34 )
+
+> **此时优化的效果**：All done 2000000 calls (plus 0 warmup) 1.476 ms avg, ==65159.6 qps==
+
+**优化6：**
+	emplace_back 不一定比 push_back 快？   这里push的变量是内置类型，且vector数组空间提前分配好，反而push_back更快，最终该函数的执行耗时下降了40%左右
+
+​	 优化效果：==65159.6 qps -->  721862.6 qps== 
+
+​	【[点击查看valgrind对此性能分析工具的结果](images\perf_push_vs_emplace.png)】
+
+**优化7**： 优化了Poller类的数据结构，经过工具分析，由于其中被高频调用的Poller::poll方法中的map::find()占用了该方法很大的开销，因此考虑从hash map 到 array，降低了find的耗时
+
+​	 优化效果：   ==721862.6  qps --> 815159.1 qps==
 
 
 
+**最终**：在本地进行评测，将电脑性能开到性能模式，处理速度到达物理极限（**百万**级别），
+
+> All done 1000000 calls (plus 0 warmup) 0.211 ms avg, ==951581.8 qps==
+
+​	  同时muduo最高能只到82万左右，超过了muduo库（毕竟耗费不少精力使用Valgrind进行了优化），下表是一个性对比（同一台机器，服务开8线程，测试工具打开200个并发连接）
+
+|                         echo-server                          | &nbsp;&nbsp;&nbsp;&nbsp;qps | avg response |
+| :----------------------------------------------------------: | :-------------------------: | :----------: |
+|                     fortio自带echo serve                     |          702796.2           |   0.320 ms   |
+| muduo 🧐  [【查看fortio 实测结果】](images/muduo_echo_8threads.png) |          842172.4           |   0.214 ms   |
+|  LanceNet🎉[【查看fortio 实测结果】](images/100wEchoQps.png)  |        **951581.8**         | **0.211 ms** |
+
+可见，LanceNet具有最高的qps和最低的平均响应时间👏
 
 
-**服务端连接关闭**
 
-将主动关闭连接分成两步骤来做，先关闭本地“写”端`shutdown(sock, SHUT_WR)`，防止还有数据在路上漏读，等对方关闭之后，在关本地“读”端。此过程底层通常为，服务端发完了数据，于是shutdown write，发送TCP FIN分节，对方会读到0字节，然后都放通常关闭连接，这样网络库会读到0字节，然后关闭连接（**真正调用close(fd)**)。
+#### 2. 群聊软件
 
-
-
-**为什么需要应用层缓冲区？**
-
-用户态使用**接受缓冲区**的原因：主要原因是即便发送方一个字节一个字节的发送数据，接收端代码也能正常工作
-
-发送方使用**发送缓冲区**的原因：防止系统的TCP换成不够导致IO线程阻塞影响性能
+目前构建了基于控制台的群聊服务，还在持续完善中...🍖
