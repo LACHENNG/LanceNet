@@ -17,7 +17,8 @@ class EventLoop;
 // It basically represents IO handlers
 // Contains a socket fd but do not own it, the owner loop is responsible for closing it
 // Must unregister itself when dtor
-
+//
+// @brief: Channel class expresses the relationship between a file descriptor and its interested IO events, as well as the callback functions that should be executed when these events occur.
 class FdChannel : noncopyable
 {
 public:

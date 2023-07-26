@@ -17,20 +17,16 @@ Timer::Timer(TimeStamp expiration, Callback onAlarmCb, bool repeat, double inter
     intervalSecs_(intervalSecs),
     id_(getAndIncreaseId())
 {
-
-    LOG_INFOC << "Timer::Timer() with id= "  << id_;
 }
 
 Timer::~Timer()
 {
-    LOG_INFOC << "~Timer() with id= "  << id_;
     numTimersCreated--;
 }
 
 void Timer::OnExpiration()
 {
     assert(TimeStamp::now() >= timeExpiration_);
-    LOG_INFOC << "Timer with id = " << id() << " OnExpiration()";
     onAlarmCb_();
 }
 

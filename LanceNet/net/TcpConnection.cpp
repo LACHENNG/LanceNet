@@ -1,3 +1,4 @@
+#include "LanceNet/base/Time.h"
 #include "LanceNet/base/unix_wrappers.h"
 #include <LanceNet/net/EventLoop.h>
 #include <LanceNet/net/TcpConnection.h>
@@ -203,11 +204,21 @@ void TcpConnection::destoryedConnection(const TcpConnectionPtr& conn)
     if(on_disconnt_cb_){
         on_disconnt_cb_(shared_from_this(), talkChannel_->fd(), &peer_addr_);
     }
-    // at this time the only possible reference to TcpConnection is this function itself or user client code 
+    // at this time the only possible reference to TcpConnection is this function itself or user client code or scheduled TcpServer/TcpClient::removeChannel which often be execute soon in next round of eventloop
     // all reference in LanceNet lib is released, so if the use count not equal to 1 means client may still hold a copy to conn
-    if(conn.use_count() != 1){
-        LOG_WARNC << "TcpConnectionPtr should be destoryed but it is still referenced by your client code, do you forget to release it in your client code on dissconnection? (eg. on OnDissConnection UserCallback or so.)";
-    }
+    //
+    // TcpServer/TcpClient::removeChannel is scheduling to run in next round of loop, so release of conn may
+    // take some time, so after two secs(most likly TcpServer or TcpClient release its reference to conn), check
+    // again to see any leak in user client code
+    getLoop()->runAt(TimeStamp::now(), [conn]()
+      {
+        if(conn.use_count() != 1){
+            LOG_WARNC << "TcpConnectionPtr [ fd = " 
+                      << conn->fdOfTalkChannel() << " ]" 
+                      << " should be destoryed but it is still referenced by your client code, do you forget to release it in your client code on dissconnection? (eg. on OnDissConnection UserCallback or so.)";
+         }
+       }, 2);
+
     owner_loop_->remove(conn->talkChannel_.get());
 }
 
