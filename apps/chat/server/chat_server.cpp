@@ -1,49 +1,85 @@
 #include "chat_server.h"
+#include "LanceNet/net/Buffer.h"
 #include "LanceNet/net/EventLoop.h"
 #include "LanceNet/base/Logging.h"
+#include "apps/chat/codec/MessageCodec.h"
+#include <boost/test/tools/assertion.hpp>
 #include <functional>
 #include <cassert>
+#include <google/protobuf/message.h>
 #include <netdb.h>
+#include "../codec/msg.pb.h"
 
 using namespace std::placeholders;
+
+namespace LanceNet {
+namespace net {
 
 ChatServer::ChatServer(EventLoop* loop, int listen_port)
   : m_loop(loop),
     m_server(loop, listen_port),
-    codec(std::bind(&ChatServer::OnStringMessage, this, _1,_2,_3))
+    m_codec(new ProtobufCodec())
 {
     m_server.setOnDissconnectionCb(std::bind(&ChatServer::OnDisConnection, this, _1, _2, _3));
     m_server.setOnNewConnectionCb(std::bind(&ChatServer::OnNewConnection, this, _1, _2, _3));
-    m_server.setOnMessageCb(std::bind(&MessageCodec::OnMessage, &codec, _1, _2,_3));
+
+    m_server.setOnMessageCb([this](const TcpConnectionPtr& conn, Buffer* buf,TimeStamp ts){
+        m_codec->OnRawBytes(conn, buf, ts);
+    });
+    m_codec->setOnProtobufMessageCallback([this](const TcpConnectionPtr &conn, const google::protobuf::Message &message, TimeStamp ts){
+       this->OnMessage(conn, message, ts);
+    });
 }
 
-void ChatServer::OnStringMessage(const LanceNet::net::TcpConnectionPtr& conn,const std::string& msg ,LanceNet::TimeStamp)
+ChatServer::~ChatServer()
 {
-   // LOG_INFOC << "server received form " << conn->name() << " msg : " << msg << " connections.size() = " << m_connections.size();
+}
+
+void ChatServer::OnMessage(const TcpConnectionPtr& conn,const google::protobuf::Message& message, TimeStamp ts)
+{
     for(const auto &client : m_connections){
-        // do not send back to message sender itself
-        if(client != conn)
-            codec.send(client, msg);
+        // if(client != conn)
+        if(message.GetDescriptor() == DialogMessage::GetDescriptor())
+        {
+            const DialogMessage *dialog = dynamic_cast<const DialogMessage*>(&message);
+            LOG_INFO << "username: " << dialog->username() << "\n" 
+                     << "msg type: " << dialog->type() << "\n" 
+                     << "content: " << dialog->content();
+            m_codec->send(client, message);
+        }
+        else{
+            LOG_WARNC << "unrecognized message type";
+        }
     }
 }
 
 void ChatServer::start()
 {
-    m_server.start(); 
+    m_server.start();
 }
+
+
+void ChatServer::send(const TcpConnectionPtr& conn, const google::protobuf::Message& message)
+{
+    m_codec->send(conn, message);
+}
+
 void ChatServer::OnNewConnection(const TcpConnectionPtr& tcpConnPtr, int conn_fd, const SA_IN* peer_addr)
 {
-
-    LOG_INFOC << "got new connection fd =  " << conn_fd;
+    LOG_DEBUGC << "got new connection fd =  " << conn_fd;
     assert(m_connections.find(tcpConnPtr) == m_connections.end());
     m_connections.insert(tcpConnPtr);
 }
 
 void ChatServer::OnDisConnection(const TcpConnectionPtr &tcpConnPtr, int conn_fd, const SA_IN* peer_addr)
 {
-    LOG_INFOC << "disconnection fd =  " << conn_fd;
+    LOG_DEBUG << "disconnection fd =  " << conn_fd;
     assert(m_connections.find(tcpConnPtr) != m_connections.end());
     m_connections.erase(tcpConnPtr);
 }
+
+
+} // namespace LanceNet
+} // namespace net
 
 

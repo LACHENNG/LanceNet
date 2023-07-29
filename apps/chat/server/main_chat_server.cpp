@@ -1,7 +1,8 @@
 #include "chat_server.h"
 #include "LanceNet/net/EventLoop.h"
 
-
+using namespace LanceNet;
+using namespace net;
 int main(int argc, const char* argv[])
 {
     if(argc > 1){
