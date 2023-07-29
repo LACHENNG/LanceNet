@@ -36,7 +36,8 @@ private:
     const int kdefaultInitSize_;
     constexpr static const char* const kCRLF = "\r\n" ;
     // optimize speeed : caching buf_.begin() 
-    void* cached_buf_begin_;
+    // has problem when involve std:move
+    // void* cached_buf_begin_;
 
 public:
     // default buffer size
@@ -50,6 +51,7 @@ public:
     size_t readableBytes() const { return writeindex_ - readindex_; }
     size_t writeableBytes() const { return buf_.size() - writeindex_; }
     size_t prependableBytes() const { return readindex_; }
+    // Note: not the size of contents, but the size of buffer
     size_t size() const { return buf_.size(); }
     size_t prependSize() const { return kprependSize_; }
     // get init size of the buffer
@@ -141,16 +143,8 @@ public:
 
     StringPiece toStringPiece() const { return StringPiece(beginRead(), readableBytes()); }
 
-private:
-    // the begining of internal mem buffer
-    char* begin() { return cachedBegin(); }
-    const char* begin() const { return cachedBegin(); }
-    char* beginRead() { return cachedBegin() + readindex_; }
-    const char* beginRead() const { return cachedBegin() + readindex_; }
-    char* beginWrite() { return cachedBegin() + writeindex_; }
-    const char* beginWrite() const { return cachedBegin() + writeindex_; }
-    char* cachedBegin() const { return static_cast<char*>(cached_buf_begin_); }
-    void resetRWIndex() { readindex_ = writeindex_ = kprependSize_; }
+    void ensureWriteableSpace(size_t len);
+    
     // adjust read watermark
     void hasRead(size_t sz) { 
         readindex_ += sz;
@@ -158,12 +152,20 @@ private:
     }
     // adjust write watermark
     void hasWritten(size_t sz) { writeindex_ += sz; }
+
+private:
+    // the begining of internal mem buffer
+    char* begin() { return buf_.data(); }
+    const char* begin() const { return buf_.data(); }
+    char* beginRead() { return buf_.data() + readindex_; }
+    const char* beginRead() const { return buf_.data() + readindex_; }
+    char* beginWrite() { return buf_.data() + writeindex_; }
+    const char* beginWrite() const { return buf_.data() + writeindex_; }
+    void resetRWIndex() { readindex_ = writeindex_ = kprependSize_; }
     // unread watermark
     void unread(size_t sz) { readindex_ -= sz; assert(readindex_ >= 0); }
 
-    void ensureWriteableSpace(size_t len);
-
-    void resize(size_t sz) { buf_.resize(sz); cached_buf_begin_ = buf_.data(); }
+    void resize(size_t sz) { buf_.resize(sz); }
 
 };
 

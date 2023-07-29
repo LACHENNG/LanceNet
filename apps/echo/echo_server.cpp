@@ -18,7 +18,7 @@ using TcpConnectionPtr = TcpServer::TcpConnectionPtr;
 EventLoop* gloop;
 
 
-void OnMessage(const TcpConnection::TcpConnectionPtr& conn, Buffer* buffer, TimeStamp ts)
+void OnMessage(const TcpConnectionPtr& conn, Buffer* buffer, TimeStamp ts)
 {
     //echo
     // std::string res = buffer->retrieveAllAsString();

@@ -37,17 +37,17 @@ void TcpClient::start()
     connectorPtr_->start();
 }
 
-void TcpClient::setOnMessageCallback(OnMessageCb messagecb)
+void TcpClient::setOnMessageCallback(const OnMessageCb& messagecb)
 {
     messagecb_ = messagecb;
 }
 
-void TcpClient::setOnDisconnectedCb(OnDisconnectedCb ondisconnectedcb)
+void TcpClient::setOnDisconnectedCb(const OnDisconnectedCb& ondisconnectedcb)
 {
     disconnectcb_ = ondisconnectedcb;
 }
 
-void TcpClient::setOnConnectionCallback(OnConnectionEstablishedCb connectcb)
+void TcpClient::setOnConnectionCallback(const OnConnectionEstablishedCb& connectcb)
 {
     connectioncb_ = connectcb;
 }

@@ -11,7 +11,7 @@ using namespace net;
 
 EventLoop* gloop;
 
-void OnConnection(TcpConnection::TcpConnectionPtr conn, int fd, const SA_IN* peer)
+void OnConnection(TcpConnectionPtr conn, int fd, const SA_IN* peer)
 {
    char name[32];
    char port[32];

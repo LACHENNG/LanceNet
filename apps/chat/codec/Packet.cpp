@@ -1,0 +1,105 @@
+#include "Packet.h"
+#include <cstdint>
+#include <cstdlib>
+
+#include <LanceNet/base/Logging.h>
+#include <google/protobuf/message.h>
+
+namespace LanceNet
+{
+namespace net
+{
+
+// std::shared_ptr<Packet> Packet::makePakage(const StringPiece& msgTypeName, const size_t nPayloadBytes)
+// {
+//     std::shared_ptr<Packet> packet = std::make_shared<Packet>();
+//     packet->allocate(kHeaderLen + kMsgNameLen + msgTypeName.size() + nPayloadBytes + kCheckSumLen);
+// 
+//     return packet;
+// }
+
+bool Packet::canParseFromArray(const void* start, size_t len)
+{
+    int readableBytes = len;
+    if( readableBytes >= kHeaderLen)
+    {
+        int32_t belen = *static_cast<const int32_t*>(start);
+        int32_t msglen = ntohl(belen);
+        LOG_TRACE << "msg be32len " << belen;
+        LOG_TRACE << "decoded data len " << msglen;
+        // FIXME
+        if(msglen < 0 || msglen > UINT16_MAX){
+            return false;
+        }
+        if(readableBytes < kHeaderLen + msglen){
+            return false;
+        }
+    }
+    return true;
+}
+
+
+Packet Packet::parseFromArray(const void *start, size_t len)
+{
+    
+    // struct Proto{
+    //     const int32_t m_headerBe32;
+    //     const int32_t m_msglenBe32;
+    //     const char m_typeName[];
+    //     const char m_payload[];
+    //     const int32_t* m_checkSumBe32;
+    // };
+
+    Packet packet;
+    assert(packet.m_state == Uninstallized);
+    packet.m_headerBe32 = static_cast<const int32_t*>(start); 
+    packet.m_msglenBe32 = (const int32_t*)((const char*)packet.m_headerBe32 + sizeof(kHeaderLen));
+    packet.m_typeName = (const char*)packet.m_msglenBe32 + sizeof(kMsgNameLen);
+    int msglen = ntohl(*(packet.m_msglenBe32));
+    packet.m_payload = packet.m_typeName + msglen; // 1 for '\0'
+    packet.m_checkSumBe32 = reinterpret_cast<const int32_t*>((const char*) start + len - sizeof(kCheckSumLen));
+
+    packet.m_state = Parsed;
+
+    return packet;
+}
+// FIXME
+bool Packet::packProtoMessageToCachedSizeArray(void * start, size_t buf_size, const google::protobuf::Message& message){
+    std::string typeName = message.GetTypeName();
+    int packetBytesAll = kHeaderLen + kMsgNameLen + kCheckSumLen + typeName.size() + 1 + message.ByteSizeLong(); // 1 for '\0'
+    if(buf_size < packetBytesAll){
+        LOG_DEBUGC << "buf_size < packetBytes All" << " buf_size : " <<buf_size << " packetBytesAll : " << packetBytesAll;
+        return false; // cached buffer size is not big enough to hold serialized data
+    }
+
+    int32_t headerlenBe32 = htonl(packetBytesAll - kHeaderLen);
+    int32_t msglenBe32 = htonl(typeName.size() + 1);
+    int32_t checkSumBe32 = htonl(calcCheckSum(typeName, message));
+
+    char* dest = (char*)start;
+    *(reinterpret_cast<int32_t*>(dest)) = headerlenBe32;
+    dest += sizeof(headerlenBe32);
+    *(reinterpret_cast<int32_t*>(dest)) = msglenBe32;
+    dest += sizeof(msglenBe32);
+    dest = std::copy(typeName.begin(), typeName.end(), dest);
+    *dest++ = '\0';
+    char* begin = dest;
+    dest = (char*)message.SerializeWithCachedSizesToArray((uint8_t*)dest);
+    assert(dest - begin == message.ByteSizeLong());
+
+    *(reinterpret_cast<int32_t*>(dest)) = checkSumBe32;
+    dest += sizeof(checkSumBe32);
+
+    assert(dest - (char*)start == packetBytesAll);
+    return (dest - (char*)start == packetBytesAll);
+}
+
+// {
+//     m_bufferPtr = malloc(memorySize);
+// }
+
+
+
+
+} // namespace LanceNet
+} // namespace net

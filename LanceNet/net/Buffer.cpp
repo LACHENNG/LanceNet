@@ -24,8 +24,7 @@ Buffer::Buffer(int initSz, int prependSz)
     writeindex_(prependSz),
     kinitSize_(initSz),
     kprependSize_(prependSz),
-    kdefaultInitSize_(initSz),
-    cached_buf_begin_(buf_.data()) // caching buf_.begin()
+    kdefaultInitSize_(initSz)
 {
 }
 
@@ -35,7 +34,7 @@ Buffer::Buffer(int initSz, int prependSz)
 
 std::string Buffer::retrieveAllAsString()
 {
-    std::string rv = std::string(cachedBegin() + readindex_, cachedBegin() + writeindex_);
+    std::string rv = std::string(begin() + readindex_, begin() + writeindex_);
     retrieve(readableBytes());
     return rv;
 }
@@ -267,7 +266,6 @@ void Buffer::swap(Buffer& that)
     buf_.swap(that.buf_);
     std::swap(readindex_, that.readindex_);
     std::swap(writeindex_, that.writeindex_);
-    std::swap(cached_buf_begin_, that.cached_buf_begin_);
 }
 
 } // namespace LanceNet::net

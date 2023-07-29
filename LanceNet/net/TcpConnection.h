@@ -20,14 +20,15 @@ namespace net
 class EventLoop;
 class FdChannel;
 
+using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
+using TcpConnectionUPtr = std::unique_ptr<TcpConnection>;
 // TcpConnection class manage conn_fd and Represents a session with a client
 // It is usually mamnage by shared_ptr due to it ambiguous life cycle
 // It use a FdChannel to monitor the read or write and other events
 class TcpConnection: public noncopyable,
-                     public std::                      enable_shared_from_this<TcpConnection>
+                     public std::enable_shared_from_this<TcpConnection>
 {
 public:
-    using TcpConnectionPtr = std::shared_ptr<TcpConnection>;
     using OnNewConnectionEstablishedCb = std::function<void(const TcpConnectionPtr& connPtr, int conn_fd, const SA_IN* peer_addr)>;
     using OnMessageCb = std::function<void(const TcpConnectionPtr&, Buffer* buf, TimeStamp ts)>;
     using OnWriteCompleteCb = std::function<void (const TcpConnectionPtr& connection)>;
@@ -126,7 +127,6 @@ private:
     //
     int talkChannelfd_;
 };
-using TcpConnectionPtr = TcpConnection::TcpConnectionPtr;
 
 } // namespace net
 } // namespace LanceNet

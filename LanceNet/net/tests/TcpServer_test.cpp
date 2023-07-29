@@ -13,7 +13,6 @@ std::atomic_int32_t totalBytesReceived{0};
 
 EventLoop loop;
 
-using TcpConnectionPtr = TcpConnection::TcpConnectionPtr;
 void OnMessage(const TcpConnectionPtr& conn, Buffer* buf, TimeStamp receiveTime)
 {
     totalBytesReceived += buf->readableBytes();
@@ -22,7 +21,7 @@ void OnMessage(const TcpConnectionPtr& conn, Buffer* buf, TimeStamp receiveTime)
     LOG_INFOC << "total received bytes: " << totalBytesReceived; 
 }
 
-void OnConnectionEstablished(TcpConnection::TcpConnectionPtr connPtr, int conn_fd, const SA_IN* peer)
+void OnConnectionEstablished(TcpConnectionPtr connPtr, int conn_fd, const SA_IN* peer)
 {
    char name[32];
    char port[32];

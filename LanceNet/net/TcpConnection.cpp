@@ -156,8 +156,9 @@ void TcpConnection::send(Buffer* buf)
     else{
         Buffer data(buf->initSize(), buf->prependSize());
         data.swap(*buf);
+        LOG_DEBUGC << "++++++++++ before send buf: " << data.readableBytes() << " bytes";
         owner_loop_->pendInLoop([p=shared_from_this(), mybuf = std::move(data)](){
-            p->sendInLoop(mybuf.peek(), mybuf.size());
+            p->sendInLoop(mybuf.peek(), mybuf.readableBytes());
         });
     }
 }

@@ -33,9 +33,9 @@ public:
 
     void start();
 
-    void setOnConnectionCallback(OnConnectionEstablishedCb onconnectcb);
-    void setOnMessageCallback(OnMessageCb onmessagecb);
-    void setOnDisconnectedCb(OnDisconnectedCb ondisconnectedcb);
+    void setOnConnectionCallback(const OnConnectionEstablishedCb& onconnectcb);
+    void setOnMessageCallback(const OnMessageCb& onmessagecb);
+    void setOnDisconnectedCb(const OnDisconnectedCb& ondisconnectedcb);
 
 private:
     using ConnectorPtr = std::unique_ptr<Connector>;
