@@ -21,20 +21,18 @@ namespace net
 bool Packet::canParseFromArray(const void* start, size_t len)
 {
     int readableBytes = len;
-    if( readableBytes >= kHeaderLen)
-    {
-        int32_t belen = *static_cast<const int32_t*>(start);
-        int32_t msglen = ntohl(belen);
-        LOG_TRACE << "msg be32len " << belen;
-        LOG_TRACE << "decoded data len " << msglen;
-        // FIXME
-        if(msglen < 0 || msglen > UINT16_MAX){
-            return false;
-        }
-        if(readableBytes < kHeaderLen + msglen){
-            return false;
-        }
+    if( readableBytes < kHeaderLen) return false;
+
+    int32_t belen = *static_cast<const int32_t*>(start);
+    int32_t msglen = ntohl(belen);
+    // FIXME
+    if(msglen < 0 || msglen > UINT16_MAX){
+        return false;
     }
+    if(readableBytes < kHeaderLen + msglen){
+        return false;
+    }
+
     return true;
 }
 
@@ -45,9 +43,9 @@ Packet Packet::parseFromArray(const void *start, size_t len)
     // struct Proto{
     //     const int32_t m_headerBe32;
     //     const int32_t m_msglenBe32;
-    //     const char m_typeName[];
-    //     const char m_payload[];
-    //     const int32_t* m_checkSumBe32;
+    //     const char m_typeName[m_msglenBe32];
+    //     const char m_payload[m_headerBe32 - m_msglenBe32 - 4 - 4];
+    //     const int32_t m_checkSumBe32;
     // };
 
     Packet packet;
@@ -63,29 +61,35 @@ Packet Packet::parseFromArray(const void *start, size_t len)
 
     return packet;
 }
-// FIXME
+
+
 bool Packet::packProtoMessageToCachedSizeArray(void * start, size_t buf_size, const google::protobuf::Message& message){
     std::string typeName = message.GetTypeName();
     int packetBytesAll = kHeaderLen + kMsgNameLen + kCheckSumLen + typeName.size() + 1 + message.ByteSizeLong(); // 1 for '\0'
-    if(buf_size < packetBytesAll){
+    if(static_cast<int>(buf_size) < packetBytesAll){
         LOG_DEBUGC << "buf_size < packetBytes All" << " buf_size : " <<buf_size << " packetBytesAll : " << packetBytesAll;
         return false; // cached buffer size is not big enough to hold serialized data
     }
 
     int32_t headerlenBe32 = htonl(packetBytesAll - kHeaderLen);
+    // LOG_DEBUGC << "headerlenBe32 "<< headerlenBe32;
     int32_t msglenBe32 = htonl(typeName.size() + 1);
+    // LOG_DEBUGC << "msglenBe32 "<< msglenBe32;
     int32_t checkSumBe32 = htonl(calcCheckSum(typeName, message));
 
     char* dest = (char*)start;
-    *(reinterpret_cast<int32_t*>(dest)) = headerlenBe32;
+    *((int32_t*)(dest)) = headerlenBe32;
+    // memcpy(dest, &headerlenBe32, sizeof(int32_t));
     dest += sizeof(headerlenBe32);
-    *(reinterpret_cast<int32_t*>(dest)) = msglenBe32;
+    *((int32_t*)(dest)) = msglenBe32;
+    // memcpy(dest, &msglenBe32, sizeof(int32_t));
+
     dest += sizeof(msglenBe32);
     dest = std::copy(typeName.begin(), typeName.end(), dest);
     *dest++ = '\0';
     char* begin = dest;
     dest = (char*)message.SerializeWithCachedSizesToArray((uint8_t*)dest);
-    assert(dest - begin == message.ByteSizeLong());
+    assert(dest - begin == static_cast<int>(message.ByteSizeLong()));
 
     *(reinterpret_cast<int32_t*>(dest)) = checkSumBe32;
     dest += sizeof(checkSumBe32);
@@ -97,9 +101,6 @@ bool Packet::packProtoMessageToCachedSizeArray(void * start, size_t buf_size, co
 // {
 //     m_bufferPtr = malloc(memorySize);
 // }
-
-
-
 
 } // namespace LanceNet
 } // namespace net

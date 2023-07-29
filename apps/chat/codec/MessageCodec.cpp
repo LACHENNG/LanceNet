@@ -1,58 +1,55 @@
 #include "MessageCodec.h"
 #include "LanceNet/base/Logging.h"
-#include <bits/stdint-uintn.h>
+#include "apps/chat/codec/Packet.h"
+#include "apps/chat/codec/msg.pb.h"
 #include <cstdint>
-#include <netinet/in.h>
+#include <google/protobuf/descriptor.h>
 #include <cassert>
+#include <google/protobuf/message.h>
 
-MessageCodec::MessageCodec(const StringMessageCallback& cb)
+namespace LanceNet{
+namespace net{
+
+ProtobufCodec::ProtobufCodec()
 {
-    m_messageCallback = cb;
 }
 
-void MessageCodec::send(const LanceNet::net::TcpConnectionPtr& conn, 
-          const LanceNet::StringPiece& message)
+void ProtobufCodec::send(const LanceNet::net::TcpConnectionPtr &conn, const google::protobuf::Message& message)
 {
     LanceNet::net::Buffer buffer;
-    buffer.append(message.data(), message.size());
-    int32_t len = static_cast<int32_t>(message.size());
-    int32_t len_be32 = htonl(len);
-    LOG_INFOC << "preprend origin: " << len << " ";
-    buffer.preappend(len_be32);
-    LOG_INFOC << "preprend be32: " << len_be32 << " ";
-    assert(buffer.readableBytes() == kHeaderLen + message.size());
-    conn->send(buffer.retrieveAllAsString());
-
+    encodeToEmptyBuffer(&buffer, message);
+    conn->send(&buffer);
 }
 
-void MessageCodec::OnMessage(const LanceNet::net::TcpConnectionPtr& conn,
-               LanceNet::net::Buffer* buf,
-               LanceNet::TimeStamp receiveTime)
+void ProtobufCodec::OnRawBytes(const TcpConnectionPtr& conn, Buffer* buf, TimeStamp receiveTime)
 {
-    while(buf->readableBytes() >= kHeaderLen) 
-    {
+    using namespace google::protobuf;
+    while(Packet::canParseFromArray(buf->peek(), buf->readableBytes())){
+        Packet packet = packet.parseFromArray(buf->peek(), buf->readableBytes());
 
-        LOG_TRACE << "msg be32len " << buf->peekInt32();
-        int msg_len = ntohl(buf->peekInt32());
-        LOG_TRACE << "decoded data len " << msg_len;
-        // FIXME: current limit msg len to ushort_max 
-        if (msg_len < 0 || msg_len > UINT16_MAX) {
-            LOG_WARNC << "Invalid Length with header len = " << msg_len;
-            conn->shutdown();
-            break;
-        }
-        if (buf->readableBytes() + kHeaderLen < static_cast<size_t>(msg_len)) {
-             break;
-        }
-        buf->retrieveInt32();
-        std::string message = buf->retrieveAsString(msg_len);
-
-        LOG_DEBUGC << "decoded msg len " << message.size();
-        // received a complete msg 
-        if(m_messageCallback){
-            m_messageCallback(conn, message, receiveTime);
+        // get message type and  protoMesData
+        const char* msgType = packet.messageTypeName();
+        const char* protoData = packet.payload();
+        Message* message = reflectAndFillProtoMessage(msgType, protoData, packet.payloadLen());
+        if(m_OnprotobufMessageCb){
+            m_OnprotobufMessageCb(conn, *message, receiveTime);
         }else{
-            LOG_WARNC << "MessageCallback not set, MessageCodec discard received message";
+            LOG_WARNC << "MessageCallback not set, ProtobufCodec discard received message";
         }
+
+        buf->retrieve(packet.byteSizeAll());
     }
 }
+
+bool ProtobufCodec::encodeToEmptyBuffer(Buffer* dest_buffer, const google::protobuf::Message& message)
+{
+    assert(dest_buffer && dest_buffer->readableBytes() == 0);
+    dest_buffer->ensureWriteableSpace(Packet::bytesAllToPack(message));
+
+    bool suc = Packet::packProtoMessageToCachedSizeArray(const_cast<char*>(dest_buffer->peek()), dest_buffer->writeableBytes(), message);
+    if(suc) dest_buffer->hasWritten(Packet::bytesAllToPack(message));
+    return suc;
+}
+
+} // namespace LanceNet
+} // namespace net

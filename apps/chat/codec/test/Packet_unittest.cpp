@@ -39,6 +39,7 @@ BOOST_AUTO_TEST_CASE(testPacketSerializeDeserialize)
 
     // serialize message with success
     buffer.ensureWriteableSpace(packetLen);
+    BOOST_CHECK_EQUAL(Packet::bytesAllToPack(message), packetLen);
     BOOST_CHECK_EQUAL(buffer.writeableBytes(), packetLen);
     BOOST_CHECK_EQUAL(message.GetTypeName(), "LanceNet.DialogMessage");
     f = Packet::packProtoMessageToCachedSizeArray(const_cast<char*>(buffer.peek()), buffer.writeableBytes(), message);
@@ -50,6 +51,8 @@ BOOST_AUTO_TEST_CASE(testPacketSerializeDeserialize)
 
     // deserialized packet
     //
+    //
+    BOOST_CHECK_EQUAL(Packet::canParseFromArray(buffer.peek(), buffer.readableBytes()), true);
     Packet packet = Packet::parseFromArray(buffer.peek(), buffer.readableBytes());
     BOOST_CHECK_EQUAL(packet.headerLen(), packetLen - Packet::kHeaderLen);
     BOOST_CHECK_EQUAL(packet.typeNameLen(), message.GetTypeName().size());
@@ -61,7 +64,7 @@ BOOST_AUTO_TEST_CASE(testPacketSerializeDeserialize)
     //
     const char* protodata = packet.payload();
     const int len = packet.payloadLen();
-    google::protobuf::Message* message2 = createProtoMessage(message.GetTypeName(), protodata, len);
+    google::protobuf::Message* message2 = reflectAndFillProtoMessage(message.GetTypeName(), protodata, len);
 
     BOOST_CHECK_EQUAL(message2->GetTypeName(), message.GetTypeName());
     BOOST_CHECK_EQUAL(message2->GetDescriptor(), message.GetDescriptor());

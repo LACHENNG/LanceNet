@@ -10,7 +10,7 @@
 #include <cstdlib>
 #include <google/protobuf/arena.h>
 #include <memory>
-#include <new>
+#include <google/protobuf/message.h>
 
 // for linux 
 #include <netinet/in.h>
@@ -30,6 +30,11 @@ namespace net
 // char* payload[len - lenName - 1 - 4 - 4];
 // int32_t alder32CheckSum;  // O
 //
+// Packet provide functionality to serialize/deserialize some data and pack or depack it
+// with the above protocol
+//
+// Note that Packet do not manage memory but parse from array and serialize to arrary inplace
+// it only hold pointers to user provided memory
 class Packet{
 private:
     Packet() : m_state(Uninstallized) {}
@@ -44,14 +49,22 @@ public:
         Parsed
     };
 
-    // static std::shared_ptr<Packet> makePakage(const StringPiece& msgTypeName, const size_t nPayloadBytes);
-
     // Check if the memery in begin in start with len 
     // can form a Packet(the buffer must store Packages which should be guranteed by the caller)
+    // must gurantee that memory is valid during parsing, the packet only holds pointer to original buffer
     static bool canParseFromArray(const void* start, size_t len);
-    // manually, must gurantee that memory is valid during parsing, the packet only holds pointer to original buffer
+
+    // the returned Packet do not copy the data, but hold pointer to usr provide memory in [start, start + len)
+    // use carelly to avoid memory related errors
     static Packet parseFromArray(const void *start, size_t len);
+
+    // Pack a Protobuf::Message to user cached size array
     static bool packProtoMessageToCachedSizeArray(void * start, size_t buf_size, const google::protobuf::Message& message);
+
+    // calc bytes total to pack a `Protobuf::Message` to `Packet`
+    static size_t bytesAllToPack(const google::protobuf::Message& message) {
+        return kHeaderLen + kMsgNameLen + kCheckSumLen + message.GetTypeName().size() + 1 + message.ByteSizeLong();
+    }
 
     // get packet header len in host byte order, has to be Parsed be this call
     int32_t headerLen() const { assert(m_state == Parsed); return ntohl(*m_headerBe32); }
@@ -60,20 +73,35 @@ public:
                                                                                                //
     int32_t payloadLen() const{ assert(m_state == Parsed);return headerLen() - kMsgNameLen - typeNameLen() - 1 - kCheckSumLen;}
 
+    // total bytes of parsed Packet
     int32_t byteSizeAll() const {
         return sizeof(kHeaderLen) + sizeof(kMsgNameLen) + sizeof(kCheckSumLen) + typeNameLen() + 1 + payloadLen();
     }
+
     const char* messageTypeName() const {assert(m_state == Parsed);return m_typeName; }
+
     const char* payload() const { assert(m_state == Parsed);return m_payload; }
+
     // get packet checksum in host byte order
     int32_t checkSum() const { assert(m_state == Parsed);return ntohl(*m_checkSumBe32); }
+
+private:
     // FIXME: imple adler32
     static int32_t calcCheckSum(const StringPiece& messageTypeName, const google::protobuf::Message& protoMessage) { return 0; }
 
-private:
-    // void allocate(size_t memorySize);
-    // m_bufferPtr is point to the memory with proto:
+    // check if the packet has the right checksum
+    // FIXME : imple
+    bool validateCheckSum() { return true; }
+
     State m_state;
+
+    // struct Proto{
+    //     const int32_t m_headerBe32;
+    //     const int32_t m_msglenBe32;
+    //     const char m_typeName[m_msglenBe32];
+    //     const char m_payload[m_headerBe32 - m_msglenBe32 - 4 - 4];
+    //     const int32_t m_checkSumBe32;
+    // };
 
     const int32_t* m_headerBe32 = nullptr;
     const int32_t* m_msglenBe32= nullptr;

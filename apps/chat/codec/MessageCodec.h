@@ -1,6 +1,6 @@
 // Author : Lance @ nwpu
 //
-// MessageCodec : an intermediate layer that performs the transformation of
+// ProtobufCodec : an intermediate layer that performs the transformation of
 // 'data arrive' event in lanceNet network lib
 // to 'message arrive' event in application layer
 //
@@ -17,30 +17,77 @@
 #include <LanceNet/net/Buffer.h>
 
 #include <functional>
+#include <google/protobuf/descriptor.h>
+#include <google/protobuf/message.h>
+#include <memory>
 #include <string>
 
+namespace google
+{
+namespace protobuf
+{
+class Message;
+}
+}
 
-class MessageCodec : LanceNet::noncopyable
+namespace LanceNet
+{
+namespace net
+{
+typedef std::shared_ptr<google::protobuf::Message> MessagePtr;
+
+
+class ProtobufCodec : public LanceNet::noncopyable
 {
 public:
-    using StringMessageCallback =
-        std::function<void (const LanceNet::net::TcpConnectionPtr&,const std::string&,LanceNet::TimeStamp)>;
+    const static size_t kHeaderLen = sizeof(int32_t);
+    
+    using OnProtobufMessageCallback =
+       std::function<void (const TcpConnectionPtr&, const google::protobuf::Message& ,TimeStamp)>;
 
-    explicit MessageCodec(const StringMessageCallback& cb);
+    ProtobufCodec();
 
+    void setOnProtobufMessageCallback(const OnProtobufMessageCallback& cb)
+    { m_OnprotobufMessageCb = cb; }
+
+    // send protobuf::Message
     void send(const LanceNet::net::TcpConnectionPtr& conn,
-              const LanceNet::StringPiece& message);
+              const google::protobuf::Message& message);
 
-    void OnMessage(const LanceNet::net::TcpConnectionPtr& ,
+    void OnRawBytes(const LanceNet::net::TcpConnectionPtr& ,
                   LanceNet::net::Buffer*,
                   LanceNet::TimeStamp receiveTime);
-
 private:
-    StringMessageCallback m_messageCallback;
-    const static size_t kHeaderLen = sizeof(int32_t);
+    // encode message as a packet
+    bool encodeToEmptyBuffer(Buffer* dest_buffer, const google::protobuf::Message& message);
+
+    OnProtobufMessageCallback m_OnprotobufMessageCb;
 };
 
+// create (reflect) a message by TypeName and decode the 
+// binary data(which previously serialized by protobuf::Message::serialzexxx) to fill the Message
+// at protoData with lenght `size`
+inline google::protobuf::Message* reflectAndFillProtoMessage(const StringPiece& msgType, const char* protoData, size_t size){
+    using namespace google::protobuf;
+    // using protobuf reflect to create Message
+    google::protobuf::Message* message = nullptr;
+    const auto descriptor =  google::protobuf::DescriptorPool::generated_pool()->FindMessageTypeByName(msgType.begin());
+    if(descriptor){
+        const Message* prototype =
+            google::protobuf::MessageFactory::generated_factory()->GetPrototype(descriptor);
+        if(prototype) message = prototype->New();
+    }
 
+    if(!message){
+        return nullptr;
+    }
+    // fill Mesage
+    bool f = message->ParseFromArray(protoData, size); 
+    assert(f == true); (void) f;
+    return message;
+}
 
+} // namespace LanceNet
+} // namespace net
 
 #endif // LanceNet_MESSAGECODEC_H
