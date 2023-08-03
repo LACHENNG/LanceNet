@@ -4,6 +4,7 @@
 #include <LanceNet/net/TcpConnection.h>
 #include <LanceNet/net/FdChannel.h>
 #include <LanceNet/base/Logging.h>
+#include <cstdio>
 #include <memory>
 #include <assert.h>
 #include <netdb.h>
@@ -249,7 +250,6 @@ void TcpConnection::handleWrite()
         if(state_ == kDisConnected){
             shutdownInLoop();
         }
-        
     }
 }
 
@@ -264,7 +264,8 @@ void TcpConnection::handleClose()
 
 void TcpConnection::handleError()
 {
-    LOG_WARNC << "TcpConnection::handleError() connection name [Fd = " << talkChannel_->fd() << "]" << strerror(errno);
+    LOG_DEBUG << "TcpConnection::handleError() connection name [ Fd = " << talkChannel_->fd() << " ] \" error: " << strerror(errno) << "\" this connection will be closed";
+    handleClose();
 }
 
 std::string TcpConnection::peerIpPort() const
