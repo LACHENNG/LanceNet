@@ -131,7 +131,7 @@ ssize_t Buffer::readFdFast(int fd)
     // auto nBytesRead = Readv(fd, iovs, sizeof(iovs)/sizeof(*iovs));
     auto nBytesRead = ::readv(fd, iovs, iovsLen);
     if(nBytesRead == -1){
-        LOG_WARN << "readv()" << strerror(errno);
+        return nBytesRead;
     }
 
     // if no data read into extra buffer
